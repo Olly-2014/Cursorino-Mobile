@@ -1,0 +1,1940 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e0e10">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Cursorino · Mobile</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    /* Sfondo "bolle" di iOS 26 (colori vivaci sotto il vetro) */
+    --bg: #0e0e10;
+    --bg-deep: rgba(22, 22, 28, 0.55);
+    --bg-panel: rgba(28, 28, 36, 0.55);
+    --bg-raise: rgba(38, 38, 48, 0.55);
+    --bg-hover: rgba(255, 255, 255, 0.08);
+    --border: rgba(255, 255, 255, 0.10);
+    --border-soft: rgba(255, 255, 255, 0.07);
+    --border-bright: rgba(255, 255, 255, 0.18);
+    --text: #f2f2f5;
+    --text-muted: #b8b8c2;
+    --text-dim: #82828c;
+    --green: #34c759;
+    --green-bright: #4cd964;
+    --green-soft: rgba(76, 217, 100, 0.16);
+    --blue: #0a84ff;
+    --red: #ff453a;
+    --yellow: #ffd60a;
+    --purple: #bf5af2;
+    --cyan: #64d2ff;
+    --orange: #ff9f0a;
+    --radius: 10px;
+    --shadow: 0 -8px 30px rgba(0,0,0,0.45);
+    --glass-tint: rgba(255, 255, 255, 0.03);
+    --specular: linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.02) 40%, rgba(255,255,255,0) 60%);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Roboto, Helvetica, Arial, sans-serif;
+    background:
+      radial-gradient(120% 90% at 8% 0%, rgba(255, 69, 58, 0.45) 0%, rgba(255, 69, 58, 0) 45%),
+      radial-gradient(120% 90% at 100% 10%, rgba(10, 132, 255, 0.45) 0%, rgba(10, 132, 255, 0) 48%),
+      radial-gradient(130% 100% at 50% 110%, rgba(191, 90, 242, 0.45) 0%, rgba(191, 90, 242, 0) 55%),
+      radial-gradient(110% 80% at 90% 80%, rgba(76, 217, 100, 0.30) 0%, rgba(76, 217, 100, 0) 50%),
+      #101014;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    font-size: 16px;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+
+  /* Superficie di vetro Liquid Glass (riusabile) */
+  .glass {
+    background: var(--bg-deep);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid var(--border-bright);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 8px 28px rgba(0,0,0,0.35);
+  }
+  .glass::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    background: var(--specular); pointer-events: none;
+  }
+
+  .app {
+    display: flex; flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  /* === TOP BAR (mobile) === */
+  .topbar {
+    position: relative;
+    flex-shrink: 0;
+    height: 48px;
+    display: flex; align-items: center;
+    background: var(--bg-deep);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+    border-bottom: 1px solid var(--border-bright);
+    padding: 0 8px;
+  }
+  .topbar .logo {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 15px;
+  }
+  .logo-dot {
+    width: 22px; height: 22px;
+    background: var(--text); border-radius: 6px;
+    display: grid; place-items: center;
+    color: #0e0e10; font-size: 13px; font-weight: 800;
+  }
+  .topbar .title {
+    flex: 1; text-align: center; font-size: 15px; color: var(--text-muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .topbar .icon-btn {
+    background: transparent; border: none; color: var(--text-muted);
+    font-size: 20px; width: 40px; height: 40px; border-radius: 10px;
+    display: grid; place-items: center; cursor: pointer;
+  }
+  .topbar .icon-btn:active { background: var(--bg-hover); color: var(--text); }
+
+  /* === CONTENT SWITCHER === */
+  .screen { flex: 1; display: none; flex-direction: column; overflow: hidden; min-height: 0; }
+  .screen.active { display: flex; }
+
+  /* === FILE LIST SCREEN === */
+  .filelist-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px 8px;
+  }
+  .filelist-head .label {
+    font-size: 12px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--text-dim);
+  }
+  .add-btn {
+    background: var(--green); color: #fff; border: none;
+    width: 40px; height: 40px; border-radius: 12px; font-size: 24px;
+    display: grid; place-items: center; cursor: pointer; font-weight: 600;
+  }
+  .add-btn:active { filter: brightness(1.15); }
+  .filelist {
+    flex: 1; overflow-y: auto; padding: 4px 10px 20px;
+  }
+  .fl-empty {
+    padding: 32px 20px; text-align: center; color: var(--text-dim);
+    font-size: 15px; line-height: 1.6;
+  }
+  .fl-empty .big { font-size: 40px; margin-bottom: 10px; }
+  .fl-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 12px; border-radius: 14px; margin-bottom: 6px;
+    background: var(--bg-panel);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--border-bright);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 4px 16px rgba(0,0,0,0.25);
+    cursor: pointer;
+  }
+  .fl-item:active { background: var(--bg-hover); }
+  .fl-item .ficon {
+    width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+    display: grid; place-items: center; font-size: 12px; font-weight: 800;
+    background: var(--bg-raise); color: var(--text-muted);
+  }
+  .fl-item.file-js .ficon { color: var(--yellow); }
+  .fl-item.file-ts .ficon { color: var(--blue); }
+  .fl-item.file-py .ficon { color: var(--cyan); }
+  .fl-item.file-html .ficon { color: var(--orange); }
+  .fl-item.file-css .ficon { color: var(--purple); }
+  .fl-item.file-json .ficon { color: var(--yellow); }
+  .fl-item.file-md .ficon { color: var(--blue); }
+  .fl-item .fname { flex: 1; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fl-item .fmeta { font-size: 12px; color: var(--text-dim); }
+  .fl-item .factions { display: flex; gap: 4px; }
+  .fl-item .fbtn {
+    background: transparent; border: none; color: var(--text-muted);
+    font-size: 17px; width: 36px; height: 36px; border-radius: 8px;
+    display: grid; place-items: center; cursor: pointer;
+  }
+  .fl-item .fbtn:active { background: var(--bg-hover); color: var(--text); }
+
+  /* === EDITOR SCREEN === */
+  .editor-head {
+    position: relative;
+    flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-bottom: 1px solid var(--border-bright);
+    background: var(--bg-deep);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+  }
+  .editor-head .fname { flex: 1; font-size: 14px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .editor-head .ebadge {
+    font-size: 11px; padding: 3px 8px; border-radius: 99px;
+    background: var(--bg-raise); color: var(--text-dim);
+  }
+  .editor-body { flex: 1; display: flex; overflow: hidden; position: relative; }
+  .gutter {
+    width: 40px; background: var(--bg); text-align: right;
+    padding-top: 12px; padding-right: 8px; color: #4a4a54;
+    font-family: "SF Mono", Menlo, monospace; font-size: 15px; line-height: 1.6;
+    overflow: hidden; user-select: none; flex-shrink: 0;
+  }
+  .gutter .ln { height: 24px; }
+  .editor-wrap { flex: 1; position: relative; overflow: hidden; background: var(--bg); }
+  textarea.editor {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    background: transparent; color: transparent; caret-color: var(--green-bright);
+    border: none; outline: none; resize: none;
+    padding: 12px 14px; font-family: "SF Mono", Menlo, monospace;
+    font-size: 15px; line-height: 1.6; white-space: pre; overflow: auto; z-index: 2;
+  }
+  pre.highlight {
+    position: absolute; inset: 0; margin: 0; padding: 12px 14px;
+    font-family: "SF Mono", Menlo, monospace; font-size: 15px; line-height: 1.6;
+    white-space: pre; overflow: hidden; pointer-events: none; z-index: 1; color: var(--text);
+  }
+  .welcome {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 16px; padding: 24px; color: var(--text-muted); text-align: center;
+  }
+  .welcome .big { font-size: 52px; }
+  .welcome h2 { font-size: 22px; color: var(--text); font-weight: 600; }
+  .welcome p { font-size: 15px; line-height: 1.6; }
+  .welcome button {
+    background: var(--green); border: none; color: #fff; font-weight: 700;
+    padding: 14px 26px; border-radius: 12px; font-size: 16px; cursor: pointer;
+  }
+  .welcome button:active { filter: brightness(1.15); }
+
+  /* === AI SCREEN === */
+  .ai-head {
+    position: relative;
+    flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-bottom: 1px solid var(--border-bright);
+    background: var(--bg-deep);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+  }
+  .ai-avatar {
+    width: 30px; height: 30px; border-radius: 9px; background: var(--text);
+    display: grid; place-items: center; color: #0e0e10; font-weight: 800;
+  }
+  .ai-head .name { font-weight: 700; font-size: 16px; }
+  .ai-head .model { font-size: 12px; color: var(--text-muted); }
+  .ai-messages { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 16px; }
+  .msg { display: flex; gap: 10px; }
+  .msg .av {
+    width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+    display: grid; place-items: center; font-size: 13px; font-weight: 700;
+  }
+  .msg.user .av { background: var(--bg-raise); color: var(--text); }
+  .msg.ai .av { background: var(--text); color: #0e0e10; }
+  .msg .bubble { max-width: 88%; }
+  .msg .bubble .txt { white-space: pre-wrap; word-break: break-word; line-height: 1.5; font-size: 15px; }
+  .msg.user { flex-direction: row-reverse; }
+  .msg.user .bubble { text-align: right; }
+  .msg .code-snippet {
+    background: #0a0a0c; border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; margin-top: 8px; font-family: "SF Mono", Menlo, monospace;
+    font-size: 13px; text-align: left; overflow-x: auto; white-space: pre-wrap;
+  }
+  .msg .actions { margin-top: 8px; }
+  .apply-btn {
+    background: var(--bg-raise); border: 1px solid var(--green-bright);
+    color: var(--green-bright); font-size: 14px; padding: 8px 16px; border-radius: 9px;
+    cursor: pointer; font-weight: 600;
+  }
+  .apply-btn:active { background: var(--green-soft); }
+  .typing { display: flex; gap: 4px; padding: 6px 0; }
+  .typing span { width: 7px; height: 7px; background: var(--text-muted); border-radius: 50%; animation: blink 1.2s infinite; }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100% { opacity: 0.25; } 40% { opacity: 1; } }
+  .ai-input-wrap { flex-shrink: 0; border-top: 1px solid var(--border-bright); padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: var(--bg-deep); -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%); }
+  .ai-input-box {
+    display: flex; align-items: flex-end; gap: 8px;
+    background: var(--bg-raise); border: 1px solid var(--border-bright);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+    border-radius: 16px; padding: 8px 10px;
+  }
+  .ai-input-box textarea {
+    flex: 1; background: transparent; border: none; outline: none; resize: none;
+    color: var(--text); font-family: inherit; font-size: 16px;
+    min-height: 24px; max-height: 120px; line-height: 1.5; padding: 6px 0;
+  }
+  .ai-send {
+    background: var(--green-bright); color: #0a0a0c; border: none;
+    width: 40px; height: 40px; border-radius: 12px; cursor: pointer;
+    font-size: 18px; display: grid; place-items: center; flex-shrink: 0;
+  }
+  .ai-send:active { background: #9ad86a; }
+  .ai-send:disabled { opacity: 0.4; }
+
+  /* === TERMINAL SCREEN === */
+  .term-head {
+    position: relative;
+    flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-bottom: 1px solid var(--border-bright);
+    background: var(--bg-deep);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+    font-size: 13px; color: var(--text-muted);
+  }
+  .term-head .spacer { flex: 1; }
+  .term-body {
+    flex: 1; overflow-y: auto; padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    font-family: "SF Mono", Menlo, monospace; font-size: 14.5px; line-height: 1.5;
+  }
+  .term-body .line { white-space: pre-wrap; word-break: break-word; }
+  .term-body .prompt { color: var(--green-bright); }
+  .term-body .cmd { color: var(--text); }
+  .terminal-input-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+  .terminal-input-row .prompt { color: var(--green-bright); flex-shrink: 0; }
+  .terminal-input-row input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text); font-family: "SF Mono", Menlo, monospace;
+    font-size: 15px; caret-color: var(--green-bright);
+  }
+
+  /* === PREVIEW (fullscreen sheet) === */
+  .preview-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: none; z-index: 200; backdrop-filter: blur(3px);
+  }
+  .preview-backdrop.show { display: flex; flex-direction: column; }
+  .preview-sheet {
+    margin-top: auto; height: 88%;
+    background: rgba(20, 20, 26, 0.75);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    backdrop-filter: blur(28px) saturate(180%);
+    border-top-left-radius: 24px; border-top-right-radius: 24px;
+    border: 1px solid var(--border-bright);
+    border-bottom: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
+    display: flex; flex-direction: column; overflow: hidden;
+    padding-top: env(safe-area-inset-top);
+  }
+  .preview-head {
+    padding: 10px 14px; border-bottom: 1px solid var(--border-bright);
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  .preview-head .title { font-weight: 600; font-size: 14px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .preview-toggle {
+    display: flex; gap: 2px; background: var(--bg-raise);
+    border: 1px solid var(--border); border-radius: 9px; padding: 3px; flex-shrink: 0;
+  }
+  .preview-toggle .pbtn {
+    border: none; background: transparent; color: var(--text-muted);
+    padding: 5px 11px; border-radius: 7px; font-size: 13px; font-weight: 600;
+  }
+  .preview-toggle .pbtn.active { background: var(--green); color: #fff; }
+  .preview-head .pbtn {
+    background: var(--bg-raise); border: 1px solid var(--border);
+    color: var(--text); padding: 8px 12px; border-radius: 9px;
+    font-size: 13px; cursor: pointer; font-weight: 500; flex-shrink: 0;
+  }
+  .preview-head .pbtn.primary { background: var(--green); border-color: var(--green); color: #fff; font-weight: 700; }
+  .preview-body { flex: 1; overflow: auto; background: #0a0a0c; }
+  .preview-body pre.code-view {
+    margin: 0; padding: 14px 16px; font-family: "SF Mono", Menlo, monospace;
+    font-size: 14px; line-height: 1.6; color: var(--text); white-space: pre-wrap;
+  }
+  .preview-body iframe.render-view { width: 100%; height: 100%; border: none; background: #fff; }
+
+  /* === MODAL NUOVO FILE === */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: none; place-items: center; z-index: 300; padding: 20px;
+  }
+  .modal-backdrop.show { display: grid; }
+  .modal {
+    background: rgba(24, 24, 32, 0.85);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid var(--border-bright);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), var(--shadow);
+    border-radius: 20px; padding: 22px; width: 100%; max-width: 340px;
+  }
+  .modal h3 { margin-bottom: 16px; font-size: 18px; font-weight: 600; }
+  .modal input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 12px; color: var(--text); font-size: 16px;
+    outline: none; margin-bottom: 18px;
+  }
+  .modal input:focus { border-color: var(--green-bright); }
+  .modal .btns { display: flex; gap: 10px; justify-content: flex-end; }
+  .modal button { padding: 11px 18px; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 600; }
+  .modal .ok { background: var(--green); color: #fff; border: none; }
+  .modal .cancel { background: transparent; border: 1px solid var(--border); color: var(--text); }
+
+  /* === BOTTOM NAV === */
+  .bottomnav {
+    position: relative;
+    flex-shrink: 0; display: flex;
+    background: var(--bg-deep);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+    border-top: 1px solid var(--border-bright);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .bottomnav button {
+    flex: 1; background: transparent; border: none; color: var(--text-dim);
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 8px 0 6px; font-size: 10.5px; cursor: pointer; font-weight: 600;
+    transition: color 0.15s;
+  }
+  .bottomnav button .nic { font-size: 20px; line-height: 1; }
+  .bottomnav button.active { color: var(--green-bright); }
+
+  /* === SCHERMATA LOGIN / REGISTRAZIONE === */
+  .auth-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    background:
+      radial-gradient(120% 90% at 8% 0%, rgba(255, 69, 58, 0.45) 0%, rgba(255, 69, 58, 0) 45%),
+      radial-gradient(120% 90% at 100% 10%, rgba(10, 132, 255, 0.45) 0%, rgba(10, 132, 255, 0) 48%),
+      radial-gradient(130% 100% at 50% 110%, rgba(191, 90, 242, 0.45) 0%, rgba(191, 90, 242, 0) 55%),
+      #101014;
+  }
+  .auth-card {
+    width: 100%; max-width: 360px;
+    background: var(--bg-deep);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    backdrop-filter: blur(30px) saturate(180%);
+    border: 1px solid var(--border-bright);
+    border-radius: 22px;
+    padding: 28px 24px;
+    box-shadow: var(--shadow);
+  }
+  .auth-card .auth-logo { display: flex; align-items: center; justify-content: center; margin-bottom: 4px; }
+  .auth-card .auth-logo img { width: 58px; height: 58px; border-radius: 13px; }
+  .auth-card h1 { font-size: 22px; text-align: center; margin: 8px 0 2px; }
+  .auth-card .auth-sub { text-align: center; color: var(--text-muted); font-size: 13px; margin-bottom: 18px; line-height: 1.4; }
+  .auth-tabs { display: flex; gap: 4px; background: var(--bg-raise); border-radius: 12px; padding: 4px; margin-bottom: 16px; }
+  .auth-tab {
+    flex: 1; padding: 10px; border: none; border-radius: 9px;
+    background: transparent; color: var(--text-muted); cursor: pointer;
+    font-size: 14px; font-weight: 700; transition: background 0.12s, color 0.12s;
+  }
+  .auth-tab.active { background: var(--bg); color: var(--text); }
+  .auth-field { margin-bottom: 14px; }
+  .auth-field label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
+  .auth-field input {
+    width: 100%; padding: 13px 14px; border-radius: 12px; font-size: 16px;
+    border: 1px solid var(--border); background: var(--bg-raise);
+    color: var(--text); outline: none; transition: border-color 0.12s;
+  }
+  .auth-field input:focus { border-color: var(--green-bright); }
+  .auth-btn {
+    width: 100%; padding: 14px; border: none; border-radius: 13px;
+    background: var(--green); color: #fff; font-size: 16px; font-weight: 700;
+    cursor: pointer; margin-top: 2px; transition: filter 0.12s;
+  }
+  .auth-btn:hover { filter: brightness(1.08); }
+  .auth-error { color: var(--red); font-size: 13px; margin-top: 12px; min-height: 18px; text-align: center; line-height: 1.4; }
+  .auth-loader { text-align: center; color: var(--text-muted); font-size: 14px; margin-top: 12px; }
+  .auth-hint {
+    margin-top: 16px; padding: 12px 14px; border-radius: 12px;
+    background: var(--bg-raise); border: 1px solid var(--border);
+    font-size: 12px; color: var(--text-dim); line-height: 1.5;
+  }
+  .account-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 6px; border-radius: 20px;
+    background: var(--bg-raise); border: 1px solid var(--border);
+    color: var(--text-muted); cursor: pointer; font-size: 12px; max-width: 110px;
+  }
+  .account-btn .avatar {
+    width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+    background: var(--green); color: #fff; font-size: 10px; font-weight: 800;
+    display: grid; place-items: center;
+  }
+  .account-btn span.txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sync-status { font-size: 10px; margin-left: auto; white-space: nowrap; }
+  .sync-status.saving { color: var(--yellow); }
+  .sync-status.saved { color: var(--green-bright); }
+  .sync-status.error { color: var(--red); }
+</style>
+</head>
+<body>
+
+  <div class="app">
+    <!-- SCHERMATA LOGIN / REGISTRAZIONE -->
+    <div class="auth-overlay" id="authOverlay" style="display:none;">
+      <div class="auth-card">
+        <div class="auth-logo"><img src="icon.svg" alt="Cursorino" /></div>
+        <h1>Cursorino</h1>
+        <p class="auth-sub">Accedi per sincronizzare il tuo lavoro su tutti i dispositivi</p>
+
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="authTabLogin">Accedi</button>
+          <button class="auth-tab" id="authTabSignup">Registrati</button>
+        </div>
+
+        <div class="auth-field">
+          <label>Email</label>
+          <input type="email" id="authEmail" placeholder="tua@email.com" inputmode="email" autocomplete="email" />
+        </div>
+        <div class="auth-field">
+          <label>Password</label>
+          <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+
+        <button class="auth-btn" id="authSubmit">Accedi</button>
+        <div class="auth-error" id="authError"></div>
+        <div class="auth-loader" id="authLoader"></div>
+
+        <div class="auth-hint">
+          I tuoi file vengono salvati in modo sicuro sul cloud (Supabase) e sincronizzati tra tutti i tuoi dispositivi.
+        </div>
+      </div>
+    </div>
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="logo"><span class="logo-dot">⚡</span> Cursorino</div>
+      <button class="account-btn" id="accountBtn" style="display:none;">
+        <span class="avatar" id="accountAvatar">R</span>
+        <span class="txt" id="accountLabel">Account</span>
+      </button>
+      <span class="sync-status" id="syncStatus"></span>
+      <div class="title" id="screenTitle">File</div>
+    </div>
+
+    <!-- SCREEN: FILE LIST -->
+    <div class="screen active" id="screenFiles">
+      <div class="filelist-head">
+        <span class="label">Esplora</span>
+        <button class="add-btn" id="newFileBtn">＋</button>
+      </div>
+      <div class="filelist" id="fileList"></div>
+    </div>
+
+    <!-- SCREEN: EDITOR -->
+    <div class="screen" id="screenEditor">
+      <div class="editor-head">
+        <span class="fname" id="edFileName">—</span>
+        <span class="ebadge" id="edLang">HTML</span>
+        <button class="icon-btn" id="edRun" title="Anteprima">▶</button>
+      </div>
+      <div class="editor-body">
+        <div class="welcome" id="welcome">
+          <div class="big">⚡</div>
+          <h2>Benvenuto in Cursorino</h2>
+          <p>Crea il tuo primo file dalla scheda File, poi scrivi codice, chatta con l'AI e visualizza l'anteprima.</p>
+          <button id="welcomeNewFile">＋ Nuovo file</button>
+        </div>
+        <div class="gutter" id="gutter"></div>
+        <div class="editor-wrap" id="editorWrap" style="display:none;">
+          <pre class="highlight" id="highlight"><code id="codeOut"></code></pre>
+          <textarea class="editor" id="editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN: AI -->
+    <div class="screen" id="screenAI">
+      <div class="ai-head">
+        <div class="ai-avatar">✦</div>
+        <div>
+          <div class="name">Assistant</div>
+          <div class="model">Cursorino-GPT</div>
+        </div>
+      </div>
+      <div class="ai-messages" id="aiMessages">
+        <div class="msg ai">
+          <div class="av">✦</div>
+          <div class="bubble">
+            <div class="txt">Ciao! Fammi una domanda di <b>informatica</b> o chiedimi di <b>scrivere codice</b>. Funziono senza internet e senza API key.</div>
+          </div>
+        </div>
+      </div>
+      <div class="ai-input-wrap">
+        <div class="ai-input-box">
+          <textarea id="aiInput" placeholder="Chiedi qualcosa…" rows="1"></textarea>
+          <button class="ai-send" id="aiSend" title="Invia">➤</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN: TERMINAL -->
+    <div class="screen" id="screenTerm">
+      <div class="term-head">
+        <span>PROBLEMI · OUTPUT</span>
+        <span>bash</span>
+        <span class="spacer"></span>
+        <button class="icon-btn" id="termClear" title="Pulisci">🗑</button>
+      </div>
+      <div class="term-body" id="terminalBody"></div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <div class="bottomnav">
+      <button class="active" data-screen="screenFiles"><span class="nic">📁</span>File</button>
+      <button data-screen="screenEditor"><span class="nic">⌨️</span>Editor</button>
+      <button data-screen="screenAI"><span class="nic">✦</span>AI</button>
+      <button data-screen="screenTerm"><span class="nic">⌘</span>Terminale</button>
+    </div>
+  </div>
+
+  <!-- MODAL NUOVO FILE -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <h3>Nuovo file</h3>
+      <input type="text" id="newFileName" placeholder="es. utils.js" />
+      <div class="btns">
+        <button class="cancel" id="modalCancel">Annulla</button>
+        <button class="ok" id="modalOk">Crea</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREVIEW SHEET -->
+  <div class="preview-backdrop" id="previewBackdrop">
+    <div class="preview-sheet">
+      <div class="preview-head">
+        <span class="title" id="previewTitle">Anteprima</span>
+        <div class="preview-toggle">
+          <button class="pbtn active" id="toggleResult">▶ Risultato</button>
+          <button class="pbtn" id="toggleCode">&lt;/&gt; Codice</button>
+        </div>
+        <button class="pbtn primary" id="previewEdit">✎ Apri</button>
+        <button class="pbtn" id="previewClose">✕</button>
+      </div>
+      <div class="preview-body" id="previewBody"></div>
+    </div>
+  </div>
+
+<script>
+/* =====================================================================
+   STATO
+===================================================================== */
+const FILES = {};
+let state = {
+  files: {},
+  tabs: [],
+  activeTab: null,
+  dirty: {},
+};
+
+const $ = id => document.getElementById(id);
+const fileList = $('fileList');
+const gutterEl = $('gutter');
+const editor = $('editor');
+const highlight = $('highlight');
+const codeOut = $('codeOut');
+const aiMessages = $('aiMessages');
+const aiInput = $('aiInput');
+const terminalBody = $('terminalBody');
+const editorWrap = $('editorWrap');
+
+/* =====================================================================
+   SYNTAX HIGHLIGHTING
+===================================================================== */
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function esc(s) { return escapeHtml(s); }
+
+let currentLang = 'javascript';
+let lastHighlight = '';
+let LAST_CODE = '';
+
+function highlightCode(code, lang) {
+  let html = escapeHtml(code);
+  const patterns = {
+    javascript: [
+      { r: /(\/\/[^\n]*)/g, c: 'comment' },
+      { r: /(\/\*[\s\S]*?\*\/)/g, c: 'comment' },
+      { r: /('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`)/g, c: 'string' },
+      { r: /\b(const|let|var|function|return|if|else|for|while|import|from|export|new|class|extends|async|await|this|of|in|typeof|switch|case|break|default|try|catch|finally|throw|do|static)\b/g, c: 'keyword' },
+      { r: /\b(true|false|null|undefined|NaN|Infinity)\b/g, c: 'literal' },
+      { r: /\b(\d+(?:\.\d+)?)\b/g, c: 'number' },
+      { r: /\b([A-Za-z_$][\w$]*)(?=\s*\()/g, c: 'function' },
+    ],
+    typescript: [
+      { r: /(\/\/[^\n]*)/g, c: 'comment' },
+      { r: /('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`)/g, c: 'string' },
+      { r: /\b(const|let|var|function|return|if|else|for|while|import|from|export|type|interface|extends|async|await|new|class|implements|readonly|private|public|enum|namespace|of|in)\b/g, c: 'keyword' },
+      { r: /\b(true|false|null|undefined)\b/g, c: 'literal' },
+      { r: /\b(\d+(?:\.\d+)?)\b/g, c: 'number' },
+      { r: /\b([A-Za-z_$][\w$]*)(?=\s*[<(])/g, c: 'function' },
+    ],
+    python: [
+      { r: /(#[^\n]*)/g, c: 'comment' },
+      { r: /('''[\s\S]*?'''|"""[\s\S]*?"""|'[^']*'|"[^"]*")/g, c: 'string' },
+      { r: /\b(def|class|return|if|elif|else|for|while|import|from|as|try|except|finally|with|lambda|in|not|and|or|is|None|True|False|pass|raise|yield|global|nonlocal|print)\b/g, c: 'keyword' },
+      { r: /\b(\d+(?:\.\d+)?)\b/g, c: 'number' },
+      { r: /\b([A-Za-z_][\w]*)(?=\s*\()/g, c: 'function' },
+      { r: /(@[\w.]+)/g, c: 'decorator' },
+    ],
+    css: [
+      { r: /(\/\*[\s\S]*?\*\/)/g, c: 'comment' },
+      { r: /('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")/g, c: 'string' },
+      { r: /\b([a-zA-Z-]+)(?=\s*:)/g, c: 'property' },
+      { r: /(\#[0-9a-fA-F]{3,8}\b)/g, c: 'number' },
+      { r: /\b(\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|s|ms)?)\b/g, c: 'number' },
+      { r: /(:root|\*|body|html|div|span|ul|li|h[1-6]|a|p|button|input|textarea|pre)\b/g, c: 'keyword' },
+    ],
+    json: [
+      { r: /("(?:\\.|[^"\\])*")(\s*:)/g, c: 'key' },
+      { r: /("(?:\\.|[^"\\])*")/g, c: 'string' },
+      { r: /\b(true|false|null)\b/g, c: 'literal' },
+      { r: /\b(-?\d+(?:\.\d+)?)\b/g, c: 'number' },
+    ],
+    markdown: [
+      { r: /(^#{1,6}\s.*$)/gm, c: 'heading' },
+      { r: /(`[^`]*`)/g, c: 'string' },
+      { r: /(\*\*[^*]*\*\*|__[^_]*__)/g, c: 'bold' },
+      { r: /(^\s*[-*+]\s)/gm, c: 'keyword' },
+      { r: /(\[[^\]]*\]\([^)]*\))/g, c: 'link' },
+    ],
+    html: [
+      { r: /(&lt;!--[\s\S]*?--&gt;)/g, c: 'comment' },
+      { r: /("(?:\\.|[^"\\])*")/g, c: 'string' },
+      { r: /(&lt;\/?[a-zA-Z][a-zA-Z0-9-]*|&gt;|\/&gt;)/g, c: 'keyword' },
+      { r: /\b([a-zA-Z-]+)(?==)/g, c: 'property' },
+    ],
+  };
+  const rules = patterns[lang] || patterns.javascript;
+  const placeholders = [];
+  rules.forEach((rule, i) => {
+    html = html.replace(rule.r, (match) => {
+      const ph = `\u0000${i}\u0000${placeholders.length}\u0000`;
+      placeholders.push({ match, c: rule.c });
+      return ph;
+    });
+  });
+  html = html.replace(/\u0000(\d+)\u0000(\d+)\u0000/g, (m, ruleIdx, phIdx) => {
+    const p = placeholders[+phIdx];
+    return `<span class="tok-${p.c}">${escapeHtml(p.match)}</span>`;
+  });
+  return html;
+}
+
+const TOKEN_STYLES = `
+.comment { color: #6a737d; font-style: italic; }
+.string { color: #98c379; }
+.keyword { color: #c678dd; }
+.literal { color: #d19a66; }
+.number { color: #d19a66; }
+.function { color: #61afef; }
+.decorator { color: #e5c07b; }
+.property { color: #e06c75; }
+.key { color: #e06c75; }
+.heading { color: #e5c07b; font-weight: 700; }
+.bold { font-weight: 700; }
+.link { color: #61afef; text-decoration: underline; }
+`;
+const styleTag = document.createElement('style');
+styleTag.textContent = TOKEN_STYLES;
+document.head.appendChild(styleTag);
+
+/* =====================================================================
+   NAVIGAZIONE SCHERMATE + HELPERS
+===================================================================== */
+const SCREEN_TITLES = {
+  screenFiles: 'File',
+  screenEditor: 'Editor',
+  screenAI: 'AI',
+  screenTerm: 'Terminale',
+};
+
+function switchScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const target = $(id);
+  if (target) target.classList.add('active');
+  $('screenTitle').textContent = SCREEN_TITLES[id] || '';
+  document.querySelectorAll('.bottomnav button').forEach(b => {
+    b.classList.toggle('active', b.dataset.screen === id);
+  });
+}
+
+document.querySelectorAll('.bottomnav button').forEach(btn => {
+  btn.addEventListener('click', () => switchScreen(btn.dataset.screen));
+});
+
+function getActiveFile() {
+  return state.activeTab ? state.files[state.activeTab] : null;
+}
+
+function getLangLabel(lang) {
+  return { javascript: 'JavaScript', typescript: 'TypeScript', python: 'Python', css: 'CSS', json: 'JSON', markdown: 'Markdown', html: 'HTML', txt: 'Testo' }[lang] || 'Testo';
+}
+
+function langFromName(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  const map = { js: 'javascript', ts: 'typescript', py: 'python', css: 'css', json: 'json', md: 'markdown', html: 'html', txt: 'txt' };
+  return map[ext] || 'txt';
+}
+
+function pathFromName(name) {
+  const idx = name.lastIndexOf('/');
+  const base = idx === -1 ? name : name.slice(idx + 1);
+  const folder = idx === -1 ? '' : name.slice(0, idx);
+  return (folder ? folder + '/' : '') + base;
+}
+
+const FILE_ICONS = { javascript: 'JS', typescript: 'TS', python: 'PY', css: '#', json: '{}', markdown: 'M', html: '<>', txt: '¶' };
+
+/* =====================================================================
+   LISTA FILE
+===================================================================== */
+function renderFileList() {
+  fileList.innerHTML = '';
+  const paths = Object.keys(state.files);
+  if (paths.length === 0) {
+    fileList.innerHTML = `
+      <div class="fl-empty">
+        <div class="big">➕</div>
+        Nessun file ancora.<br>Premi ＋ per crearne uno.
+      </div>`;
+    return;
+  }
+  paths.sort().forEach(path => {
+    const f = state.files[path];
+    const item = document.createElement('div');
+    item.className = 'fl-item file-' + f.lang;
+    const icon = FILE_ICONS[f.lang] || '•';
+    item.innerHTML = `
+      <div class="ficon">${icon}</div>
+      <div class="fname">${esc(f.name)}</div>
+      <div class="fmeta">${f.content.split('\n').length} righe</div>
+      <div class="factions">
+        <button class="fbtn" data-view="${esc(path)}" title="Anteprima">👁</button>
+        <button class="fbtn" data-del="${esc(path)}" title="Elimina">🗑</button>
+      </div>`;
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('.fbtn')) return;
+      setActiveTab(path);
+      switchScreen('screenEditor');
+    });
+    item.querySelector('[data-view]').addEventListener('click', (e) => {
+      e.stopPropagation(); openPreview(path);
+    });
+    item.querySelector('[data-del]').addEventListener('click', (e) => {
+      e.stopPropagation(); deleteFile(path);
+    });
+    fileList.appendChild(item);
+  });
+}
+
+/* =====================================================================
+   EDITOR
+===================================================================== */
+function renderEditor() {
+  const f = getActiveFile();
+  const welcome = $('welcome');
+  if (!f) {
+    codeOut.innerHTML = '';
+    gutterEl.innerHTML = '';
+    editor.value = '';
+    $('edFileName').textContent = '—';
+    $('edLang').textContent = 'Testo';
+    welcome.style.display = 'flex';
+    editorWrap.style.display = 'none';
+    gutterEl.style.display = 'none';
+    return;
+  }
+  welcome.style.display = 'none';
+  editorWrap.style.display = 'block';
+  gutterEl.style.display = 'block';
+  currentLang = f.lang;
+  $('edFileName').textContent = f.name;
+  $('edLang').textContent = getLangLabel(f.lang);
+  const text = f.content + '\n';
+  editor.value = text;
+  const highlighted = highlightCode(f.content, f.lang);
+  codeOut.innerHTML = highlighted + '\n<span></span>';
+  renderGutter();
+  syncScroll();
+}
+
+function renderGutter() {
+  const f = getActiveFile();
+  const lineCount = f ? f.content.split('\n').length : 1;
+  let html = '';
+  for (let i = 1; i <= lineCount; i++) html += `<div class="ln">${i}</div>`;
+  gutterEl.innerHTML = html;
+}
+
+function syncScroll() {
+  const top = editor.scrollTop;
+  const left = editor.scrollLeft;
+  gutterEl.style.transform = `translateY(${-top}px)`;
+  highlight.style.transform = `translate(${-left}px, ${-top}px)`;
+}
+
+function setActiveTab(path) {
+  state.activeTab = path;
+  if (!state.tabs.includes(path)) state.tabs.push(path);
+  renderEditor();
+  renderFileList();
+}
+
+function deleteFile(path, skipConfirm) {
+  if (!state.files[path]) return;
+  if (!skipConfirm && !confirm('Eliminare "' + state.files[path].name + '"?')) return;
+  delete state.files[path];
+  delete state.dirty[path];
+  const idx = state.tabs.indexOf(path);
+  if (idx !== -1) state.tabs.splice(idx, 1);
+  if (state.activeTab === path) state.activeTab = state.tabs[0] || null;
+  renderFileList();
+  renderEditor();
+  scheduleSave();
+}
+
+/* =====================================================================
+   BASE DI CONOSCENZA + AI (identica alla versione desktop)
+===================================================================== */
+function stripMd(s) {
+  return s.replace(/\*\*(.*?)\*\*/g, '$1').replace(/`(.*?)`/g, '$1');
+}
+
+const KNOWLEDGE = [
+  { keys: ['linux'], answer: 'Linux è un sistema operativo libero e gratuito, creato da Linus Torvalds nel 1991. È la base di moltissimi dispositivi: dai server di Google e Facebook, ai telefoni Android, fino a elettrodomestici e supercomputer. Il suo codice è aperto (open source).' },
+  { keys: ['computer', 'pc'], answer: 'Un computer è una macchina che elabora informazioni: riceve dati in ingresso (input), li elabora seguendo i programmi, e produce risultati (output). È fatto di hardware (le parti fisiche) e software (i programmi).' },
+  { keys: ['ram', 'memoria'], answer: 'La RAM è la memoria temporanea e velocissima del computer. Contiene i dati dei programmi che stai usando ora e si svuota quando spegni il computer. Più RAM hai, più programmi puoi tenere aperti senza rallentamenti.' },
+  { keys: ['cpu', 'processore', 'chip', 'm1', 'm2', 'm3'], answer: 'La CPU è il "cervello" del computer: esegue i calcoli e le istruzioni. I chip Apple M1, M2, M3 sono processori progettati da Apple per i Mac, famosi per velocità ed efficienza energetica.' },
+  { keys: ['disco', 'ssd', 'hard disk', 'archiviazione'], answer: 'Il disco (SSD o hard disk) è la memoria permanente: conserva i file anche da spento. Gli SSD sono molto più veloci degli hard disk. Qui restano salvati i modelli di IA scaricati.' },
+  { keys: ['internet', 'web', 'rete'], answer: 'Internet è una gigantesca rete mondiale che collega miliardi di computer. Il Web (le pagine che apri nel browser) è il servizio più famoso che viaggia su Internet.' },
+  { keys: ['browser', 'safari', 'chrome'], answer: 'Il browser è il programma che usi per navigare su Internet e aprire le pagine web: Chrome, Safari, Firefox, Edge. Interpreta HTML, CSS e JavaScript e te li mostra come pagina.' },
+  { keys: ['programma', 'software', 'app', 'applicazione'], answer: 'Un programma (software o app) è un insieme di istruzioni che dicono al computer cosa fare. Le app che usi ogni giorno sono programmi software.' },
+  { keys: ['codice', 'programmazione', 'programmare'], answer: 'Programmare significa scrivere codice: istruzioni per il computer in un linguaggio che capisce. I linguaggi più usati sono Python, JavaScript, Java, C++. Ognuno ha la sua sintassi.' },
+  { keys: ['python'], answer: 'Python è uno dei linguaggi più popolari e facili da imparare. Si usa per siti web, intelligenza artificiale, analisi dati, automazione. È famoso per essere molto leggibile.' },
+  { keys: ['javascript', ' js'], answer: 'JavaScript è il linguaggio del web: rende le pagine interattive (pulsanti, animazioni, giochi). Funziona direttamente nel browser, senza installare nulla. Non c\'entra con Java!' },
+  { keys: ['html', 'css'], answer: 'HTML e CSS sono i linguaggi base delle pagine web. HTML definisce STRUTTURA e contenuto (titoli, paragrafi), CSS lo STILE (colori, spazi, caratteri). Con JavaScript formano le fondamenta del web.' },
+  { keys: ['intelligenza artificiale', 'ia', 'ai'], answer: 'L\'intelligenza artificiale (IA) è un campo dell\'informatica che crea programmi capaci di capire testi, riconoscere immagini, tradurre, generare contenuti. I modelli moderni imparano da enormi quantità di dati.' },
+  { keys: ['modello', 'llm', 'chatgpt'], answer: 'Un modello di IA (o LLM) è un "cervello digitale" addestrato su miliardi di testi. Riceve una domanda e genera una risposta parola per parola. Può girare sul cloud o in locale.' },
+  { keys: ['algoritmo'], answer: 'Un algoritmo è una sequenza di passi precisi per risolvere un problema. È come una ricetta: segui i passi nell\'ordine giusto e ottieni il risultato.' },
+  { keys: ['bit', 'byte', 'megabyte', 'gigabyte'], answer: 'Bit e byte sono le unità dell\'informazione digitale. Un bit è 0 o 1, un byte è 8 bit. 1 KB = 1024 byte, 1 MB = 1024 KB, 1 GB = 1024 MB.' },
+  { keys: ['sistema operativo', 'windows', 'macos', 'android', 'ios'], answer: 'Il sistema operativo è il programma principale che gestisce tutto: memoria, file, programmi e dispositivi. I più diffusi sono Windows, macOS, Linux, Android e iOS.' },
+  { keys: ['file', 'cartella', 'directory'], answer: 'Un file è un contenitore di informazioni salvato sul disco (documento, foto, video). Le cartelle (directory) organizzano i file in gruppi, come i cassetti di un armadio.' },
+  { keys: ['virus', 'malware', 'sicurezza', 'antivirus'], answer: 'Un virus (malware) è un programma malvagio creato per danneggiare o rubare dati. Proteggiti: non scaricare da siti sconosciuti e tieni il sistema aggiornato.' },
+  { keys: ['wifi', 'wireless', 'bluetooth'], answer: 'Il Wi-Fi collega i dispositivi a Internet senza fili (onde radio). Il Bluetooth collega i dispositivi tra loro a breve distanza (cuffie, tastiere).' },
+  { keys: ['cloud', 'nuvola'], answer: 'Il cloud è un insieme di computer remoti che conservano i tuoi dati su Internet invece che sul dispositivo. Esempi: Google Drive, iCloud, Dropbox.' },
+  { keys: ['gpu', 'scheda grafica'], answer: 'La GPU è un processore specializzato nei calcoli paralleli. Nata per i videogiochi, oggi è fondamentale per l\'IA perché addestra i modelli molto più velocemente della CPU.' },
+  { keys: ['email', 'posta elettronica'], answer: 'L\'email è un sistema per mandare messaggi digitali tra persone via Internet. Un indirizzo ha la forma nome@dominio.com.' },
+  { keys: ['tastiera', 'mouse', 'schermo', 'monitor'], answer: 'Le periferiche sono dispositivi collegati al computer: input (tastiera, mouse) per dare comandi, output (schermo, stampante) per mostrare i risultati.' },
+  { keys: ['open source', 'software libero'], answer: 'Open source significa che il codice sorgente è pubblico: chiunque può leggerlo, modificarlo e distribuirlo. È il principio di Linux e Firefox.' },
+  { keys: ['server', 'client'], answer: 'Un server è un computer potente che fornisce servizi (siti, dati). Il client è il tuo dispositivo che li richiede. Quando apri un sito, il browser (client) chiede i dati al server.' },
+  { keys: ['database', 'dati'], answer: 'Un database è una raccolta organizzata di dati, cercabili e aggiornabili velocemente, come una grande tabella. Quasi tutte le app ne usano uno.' },
+  { keys: ['http', 'https', 'url'], answer: 'HTTP è il protocollo con cui browser e server si scambiano dati. HTTPS è la versione sicura (dati cifrati). L\'URL è l\'indirizzo unico di una pagina web.' },
+  { keys: ['wikipedia'], answer: 'Wikipedia è un\'enciclopedia online gratuita scritta da volontari di tutto il mondo. È in centinaia di lingue ed è un ottimo punto di partenza per informarsi.' }
+];
+
+function findKnowledge(prompt) {
+  const p = prompt.toLowerCase();
+  const whatIs = p.match(/(?:che cos'?è|cos'?è|cos'?e|cosa è|cosa e|cosa significa|cosa vuol dire|spiegami|dimmi|cose)\s+(?:un|una|il|lo|la|i|gli|le)?\s*([a-zà-ù0-9\s]+)/i);
+  if (whatIs) {
+    const subject = whatIs[1].trim();
+    let best = null, bestScore = 0;
+    KNOWLEDGE.forEach(k => {
+      k.keys.forEach(key => {
+        if (subject.includes(key) || key.includes(subject) || subject.split(' ').some(w => key.includes(w))) {
+          if (key.length > bestScore) { bestScore = key.length; best = k; }
+        }
+      });
+    });
+    if (best) return best;
+  }
+  let best = null, bestScore = 0;
+  KNOWLEDGE.forEach(k => {
+    k.keys.forEach(key => {
+      if (p.includes(key) && key.length > bestScore) { bestScore = key.length; best = k; }
+    });
+  });
+  return best;
+}
+
+function firstSentence(t) {
+  const end = t.search(/[.!?]\s/);
+  return end === -1 ? t : t.slice(0, end + 1);
+}
+
+function extractFnName(prompt) {
+  const m = prompt.match(/(?:funzione|function|classe|class|componente)\s+(?:chiamata\s+)?([A-Za-z_$][\w$]*)/i) ||
+            prompt.match(/(?:che|per)\s+([A-Za-z_$][\w$]*)/i) ||
+            prompt.match(/([A-Za-z_$][\w$]*)\s*\(/);
+  return m ? m[1] : null;
+}
+
+function generateSnippet(lang, name, prompt) {
+  switch (lang) {
+    case 'python': return `def ${name}(...) -> None:\n    """\n    ${stripMd(prompt).slice(0,60)}\n    """\n    # TODO: implementa la logica\n    pass\n`;
+    case 'typescript': return `export function ${name}(input: string): string {\n  // ${stripMd(prompt).slice(0,50)}\n  return input;\n}\n`;
+    case 'css': return `.${name} {\n  /* ${stripMd(prompt).slice(0,40)} */\n  display: block;\n}\n`;
+    case 'json': return `{\n  "${name}": {\n    "enabled": true\n  }\n}\n`;
+    default: return `function ${name}(args) {\n  // ${stripMd(prompt).slice(0,50)}\n  return args;\n}\n`;
+  }
+}
+
+function buildAppCode(typeId, title) {
+  switch (typeId) {
+    case 'calculator':
+      return `<h1>🧮 ${title}</h1>
+<div id="calc">
+  <input id="calcDisplay" readonly value="0">
+  <div class="grid">
+    <button class="op" data-v="C">C</button><button class="op" data-v="(">(</button><button class="op" data-v=")">)</button><button class="op" data-v="/">÷</button>
+    <button data-v="7">7</button><button data-v="8">8</button><button data-v="9">9</button><button class="op" data-v="*">×</button>
+    <button data-v="4">4</button><button data-v="5">5</button><button data-v="6">6</button><button class="op" data-v="-">−</button>
+    <button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button class="op" data-v="+">+</button>
+    <button data-v="0" style="grid-column:span 2">0</button><button data-v=".">.</button><button class="eq" data-v="=">=</button>
+  </div>
+</div>
+<script>
+  let expr = '';
+  const d = document.getElementById('calcDisplay');
+  document.querySelectorAll('#calc button').forEach(b => b.onclick = () => {
+    const v = b.dataset.v;
+    if (v === 'C') { expr = ''; d.value = '0'; }
+    else if (v === '=') { try { d.value = Function('return ' + expr.replace('×','*').replace('÷','/').replace('−','-'))(); expr = d.value; } catch(e){ d.value='Errore'; expr=''; } }
+    else { expr += v; d.value = expr; }
+  });
+</scr` + 'ipt>';
+
+    case 'notes':
+      return `<h1>📝 ${title}</h1>
+<input id="noteInput" placeholder="Scrivi una nota e premi Invio…">
+<ul id="noteList"></ul>
+<script>
+  const nl = document.getElementById('noteList');
+  function addNote() {
+    const v = document.getElementById('noteInput').value.trim();
+    if (!v) return;
+    const li = document.createElement('li');
+    li.innerHTML = '<span>' + v.replace(/</g,'&lt;') + '</span><button>🗑</button>';
+    li.querySelector('button').onclick = () => li.remove();
+    nl.appendChild(li);
+    document.getElementById('noteInput').value = '';
+  }
+  document.getElementById('noteInput').addEventListener('keydown', e => { if (e.key === 'Enter') addNote(); });
+</scr` + 'ipt>';
+
+    case 'weather':
+      return `<h1>🌤 ${title}</h1>
+<p>Tocca un giorno per vedere il meteo (simulato):</p>
+<div class="days">
+  <div class="day" onclick="showW('Lun','☀️',28)"><b>Lun</b><span>☀️</span><em>28°</em></div>
+  <div class="day" onclick="showW('Mar','⛅',24)"><b>Mar</b><span>⛅</span><em>24°</em></div>
+  <div class="day" onclick="showW('Mer','🌧',19)"><b>Mer</b><span>🌧</span><em>19°</em></div>
+  <div class="day" onclick="showW('Gio','⛈',17)"><b>Gio</b><span>⛈</span><em>17°</em></div>
+  <div class="day" onclick="showW('Ven','☀️',30)"><b>Ven</b><span>☀️</span><em>30°</em></div>
+</div>
+<div class="detail" id="wdetail">Seleziona un giorno</div>
+<script>
+  function showW(name, icon, temp) {
+    document.getElementById('wdetail').innerHTML = '<b style="font-size:40px">' + icon + '</b><br>' + name + ': ' + temp + '°C';
+  }
+</scr` + 'ipt>';
+
+    case 'timer':
+      return `<h1>⏱ ${title}</h1>
+<div id="timeDisplay">00:00.0</div>
+<button class="big" id="startBtn">Avvia</button>
+<button id="resetBtn">Azzera</button>
+<p class="hint">Cronometro con precisione al decimo di secondo.</p>
+<script>
+  let running = false, msVal = 0, intv;
+  const disp = document.getElementById('timeDisplay');
+  function fmt() {
+    const m = Math.floor(msVal/60000), s = Math.floor((msVal%60000)/1000), t = Math.floor((msVal%1000)/100);
+    return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0') + '.' + t;
+  }
+  document.getElementById('startBtn').onclick = function() {
+    running = !running;
+    this.textContent = running ? 'Pausa' : 'Avvia';
+    if (running) intv = setInterval(() => { msVal += 100; disp.textContent = fmt(); }, 100);
+    else clearInterval(intv);
+  };
+  document.getElementById('resetBtn').onclick = () => { msVal = 0; disp.textContent = fmt(); };
+</scr` + 'ipt>';
+
+    case 'draw':
+      return `<h1>🎨 ${title}</h1>
+<canvas id="c" width="320" height="320"></canvas>
+<input type="color" id="color" value="#000000">
+<button id="clearBtn">Pulisci</button>
+<script>
+  const c = document.getElementById('c'), ctx2 = c.getContext('2d');
+  let draw = false;
+  c.onmousedown = c.ontouchstart = e => { draw = true; ctx2.beginPath(); ctx2.moveTo(e.offsetX||e.touches[0].clientX, e.offsetY||e.touches[0].clientY); };
+  c.onmousemove = c.ontouchmove = e => { if(!draw) return; const x=e.offsetX||e.touches[0].clientX, y=e.offsetY||e.touches[0].clientY; ctx2.lineTo(x,y); ctx2.stroke(); };
+  c.onmouseup = c.ontouchend = () => draw = false;
+  document.getElementById('color').oninput = e => ctx2.strokeStyle = e.target.value;
+  document.getElementById('clearBtn').onclick = () => ctx2.clearRect(0,0,c.width,c.height);
+</scr` + 'ipt>';
+
+    case 'tictactoe':
+      return `<h1>⭕ ${title}</h1>
+<div id="board" class="board"></div>
+<div id="status">Turno: ❌</div>
+<button id="restart">Ricomincia</button>
+<script>
+  let b = Array(9).fill(''), turn = '❌';
+  const board = document.getElementById('board'), st = document.getElementById('status');
+  function win() {
+    const w = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    return w.some(l => b[l[0]] && b[l[0]]===b[l[1]] && b[l[0]]===b[l[2]]);
+  }
+  function render() { board.innerHTML=''; b.forEach((v,i)=>{ const c=document.createElement('div'); c.className='cell'; c.textContent=v; c.onclick=()=>{ if(v||win()) return; b[i]=turn; turn = turn==='❌'?'⭕':'❌'; render(); }; board.appendChild(c); }); st.textContent = win() ? 'Vince ' + (turn==='❌'?'⭕':'❌') + '!' : (b.every(x=>x) ? 'Pareggio!' : 'Turno: '+turn); }
+  document.getElementById('restart').onclick = () => { b = Array(9).fill(''); turn='❌'; render(); };
+  render();
+</scr` + 'ipt>';
+
+    case 'memory':
+      return `<h1>🧠 ${title}</h1>
+<div id="grid" class="grid2"></div>
+<p id="moves">Mosse: 0</p>
+<script>
+  const emojis = ['🍎','🍌','🍇','🍓','🍒','🥝','🍍','🍉'];
+  let cards = [...emojis, ...emojis].sort(()=>Math.random()-0.5), open=[], moves=0, found=0;
+  const g = document.getElementById('grid');
+  function render() { g.innerHTML=''; cards.forEach((cc,i)=>{ const el=document.createElement('div'); el.className='card'+(open.includes(i)?'':' hidden'); el.innerHTML = open.includes(i)?cc:''; el.onclick=()=>{ if(open.length===2)return; open.push(i); if(open.length===2){ moves++; document.getElementById('moves').textContent='Mosse: '+moves; if(cards[open[0]]===cards[open[1]]){ found+=2; open=[]; if(found===cards.length) setTimeout(()=>alert('Hai vinto! 🎉'),100); } else setTimeout(()=>open=[],600); } render(); }; g.appendChild(el); }); }
+  render();
+</scr` + 'ipt>';
+
+    case 'snake':
+      return `<h1>🐍 ${title}</h1>
+<p class="hint">Usa le frecce della tastiera</p>
+<canvas id="snake" width="320" height="320"></canvas>
+<div id="score">0</div>
+<script>
+  const c = document.getElementById('snake'), ctx = c.getContext('2d');
+  let snake = [{x:8,y:8}], dir={x:1,y:0}, food={x:15,y:15}, score=0, over=false;
+  function step(){
+    const head = {x:snake[0].x+dir.x, y:snake[0].y+dir.y};
+    if(head.x<0||head.y<0||head.x>=20||head.y>=20||snake.some(s=>s.x===head.x&&s.y===head.y)){ over=true; ctx.fillStyle='red'; ctx.fillText('Game Over',120,160); return; }
+    snake.unshift(head);
+    if(head.x===food.x&&head.y===food.y){ score++; document.getElementById('score').textContent=score; food={x:Math.floor(Math.random()*20),y:Math.floor(Math.random()*20)}; } else snake.pop();
+    ctx.fillStyle='#111'; ctx.fillRect(0,0,320,320); ctx.fillStyle='#0f0'; snake.forEach(s=>ctx.fillRect(s.x*16,s.y*16,14,14)); ctx.fillStyle='red'; ctx.fillRect(food.x*16,food.y*16,14,14);
+  }
+  document.addEventListener('keydown', e => { const m={ArrowUp:{x:0,y:-1},ArrowDown:{x:0,y:1},ArrowLeft:{x:-1,y:0},ArrowRight:{x:1,y:0}}[e.key]; if(m&&!(m.x===-dir.x&&m.y===-dir.y)) dir=m; });
+  setInterval(()=>{ if(!over) step(); }, 120);
+</scr` + 'ipt>';
+
+    case 'guess':
+      return `<h1>🔢 ${title}</h1>
+<p>Indovina il numero tra 1 e 100:</p>
+<input type="number" id="guessInput" min="1" max="100">
+<button id="guessBtn">Prova</button>
+<p id="guessMsg"></p>
+<script>
+  const secret = Math.floor(Math.random()*100)+1, msg = document.getElementById('guessMsg');
+  let tries = 0;
+  document.getElementById('guessBtn').onclick = () => {
+    const v = +document.getElementById('guessInput').value; tries++;
+    if (v === secret) msg.textContent = '🎉 Esatto in ' + tries + ' tentativi!';
+    else msg.textContent = v < secret ? '📈 Più alto' : '📉 Più basso';
+  };
+</scr` + 'ipt>';
+
+    case 'quiz':
+      return `<h1>❓ ${title}</h1>
+<div class="quiz">
+  <p id="q"></p>
+  <div id="answers"></div>
+  <p id="quizRes"></p>
+</div>
+<script>
+  const questions = [
+    { q: 'Quanto fa 7 × 8?', a: ['54','56','64','48'], c: 1 },
+    { q: 'Capitale della Francia?', a: ['Londra','Roma','Parigi','Madrid'], c: 2 },
+    { q: 'Quanti pianeti nel sistema solare?', a: ['7','8','9','10'], c: 1 },
+  ];
+  let i = 0;
+  function show() {
+    if (i >= questions.length) { document.getElementById('q').textContent = 'Quiz finito! 🎉'; document.getElementById('answers').innerHTML=''; return; }
+    const q = questions[i];
+    document.getElementById('q').textContent = q.q;
+    const a = document.getElementById('answers'); a.innerHTML='';
+    q.a.forEach((ans, idx) => { const b = document.createElement('button'); b.textContent = ans; b.onclick = () => { document.getElementById('quizRes').textContent = idx===q.c ? '✅ Giusto!' : '❌ Sbagliato'; setTimeout(()=>{ i++; show(); document.getElementById('quizRes').textContent=''; }, 800); }; a.appendChild(b); });
+  }
+  show();
+</scr` + 'ipt>';
+
+    case 'counter':
+      return `<h1>🔢 ${title}</h1>
+<div id="count">0</div>
+<button class="big" id="inc">+1</button>
+<button id="dec">-1</button>
+<button id="res">Azzera</button>
+<script>
+  let n = 0; const el = document.getElementById('count');
+  document.getElementById('inc').onclick = () => el.textContent = ++n;
+  document.getElementById('dec').onclick = () => el.textContent = --n;
+  document.getElementById('res').onclick = () => { n = 0; el.textContent = n; };
+</scr` + 'ipt>';
+
+    case 'clock':
+      return `<h1>🕐 ${title}</h1>
+<div id="clockBig">--:--:--</div>
+<script>
+  setInterval(() => { const d = new Date(); document.getElementById('clockBig').textContent = d.toLocaleTimeString('it-IT'); }, 1000);
+</scr` + 'ipt>';
+
+    case 'converter':
+      return `<h1>🔄 ${title}</h1>
+<input type="number" id="convInput" value="100" placeholder="Valore">
+<div class="conv">
+  <button data-f="cm" class="on">cm → pollici</button>
+  <button data-f="kg">kg → libbre</button>
+  <button data-f="km">km → miglia</button>
+  <button data-f="c">°C → °F</button>
+</div>
+<div id="convOut">100 cm = 39.37 pollici</div>
+<script>
+  const input = document.getElementById('convInput'), out = document.getElementById('convOut');
+  function convert(f) { const v = +input.value; switch(f){ case 'cm': out.textContent = v + ' cm = ' + (v/2.54).toFixed(2) + ' pollici'; break; case 'kg': out.textContent = v + ' kg = ' + (v*2.205).toFixed(2) + ' libbre'; break; case 'km': out.textContent = v + ' km = ' + (v/1.609).toFixed(2) + ' miglia'; break; case 'c': out.textContent = v + ' °C = ' + (v*9/5+32).toFixed(1) + ' °F'; break; } }
+  document.querySelectorAll('.conv button').forEach(b => b.onclick = () => { document.querySelectorAll('.conv button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); convert(b.dataset.f); });
+  input.oninput = () => convert(document.querySelector('.conv button.on').dataset.f);
+  convert('cm');
+</scr` + 'ipt>';
+
+    case 'password':
+      return `<h1>🔐 ${title}</h1>
+<div id="pwOut">Clicca per generare</div>
+<button class="big" id="pwGen">Genera</button>
+<label><input type="number" id="pwLen" value="12" min="4" max="30"> lunghezza</label>
+<script>
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*?';
+  function gen() { const len = +document.getElementById('pwLen').value; let p=''; for(let i=0;i<len;i++) p += chars[Math.floor(Math.random()*chars.length)]; document.getElementById('pwOut').textContent = p; }
+  document.getElementById('pwGen').onclick = gen;
+</scr` + 'ipt>';
+
+    default:
+      return `<h1>👋 ${title}</h1><p>Nessuna app specifica riconosciuta. Prova: "fammi una calcolatrice", "fammi un gioco del tris", "fammi un'app per le note".</p>`;
+  }
+}
+
+function appStyles() {
+  return `<style>
+  body { font-family: -apple-system, sans-serif; background: linear-gradient(135deg,#667eea,#764ba2); color:#fff; text-align:center; padding:20px; min-height:100vh; box-sizing:border-box; }
+  h1 { margin:0 0 16px; }
+  button { background:#fff; color:#333; border:none; border-radius:10px; padding:10px 18px; margin:5px; font-size:16px; cursor:pointer; }
+  .big { font-size:22px; padding:12px 26px; }
+  input { padding:10px; border-radius:8px; border:none; margin:5px; font-size:16px; }
+  #calc, #board { max-width:260px; margin:0 auto; }
+  #calcDisplay { width:100%; text-align:right; font-size:24px; padding:10px; background:#222; color:#fff; border-radius:8px; margin-bottom:10px; }
+  #calc .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+  #calc button { padding:14px 0; font-size:18px; }
+  #calc .op { background:#ff9800; color:#fff; }
+  #calc .eq { background:#4caf50; color:#fff; }
+  #board { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
+  #board .cell { background:rgba(255,255,255,0.2); aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:40px; border-radius:10px; cursor:pointer; }
+  #grid2 { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; max-width:280px; margin:0 auto; }
+  .card { aspect-ratio:1; background:#fff; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:28px; cursor:pointer; }
+  .card.hidden { background:rgba(255,255,255,0.3); }
+  ul { list-style:none; padding:0; }
+  li { background:rgba(255,255,255,0.2); border-radius:8px; padding:10px; margin:6px 0; display:flex; justify-content:space-between; }
+  .days { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .day { background:rgba(255,255,255,0.2); border-radius:12px; padding:10px; cursor:pointer; }
+  .day span { font-size:26px; display:block; }
+  .detail { margin-top:16px; font-size:20px; }
+  #timeDisplay, #count, #clockBig, #pwOut { font-size:44px; margin:20px 0; font-weight:bold; }
+  #snake { border:2px solid #fff; border-radius:8px; background:#111; }
+  #score { font-size:24px; }
+  canvas { background:#fff; border-radius:8px; }
+  .quiz button { display:block; width:80%; margin:6px auto; background:rgba(255,255,255,0.3); color:#fff; }
+  .conv button { background:rgba(255,255,255,0.3); color:#fff; }
+  .conv button.on { background:#fff; color:#333; }
+  .hint { opacity:0.8; font-size:14px; }
+  </style>`;
+}
+
+function wrapApp(name, bodyHtml) {
+  return '<!DOCTYPE html>\n<html lang="it">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>' + name + '</title>\n' + appStyles() + '\n</head>\n<body>\n' + bodyHtml + '\n</body>\n</html>\n';
+}
+
+function inferApp(prompt) {
+  const p = prompt.toLowerCase();
+  const TYPES = [
+    { keys: ['calcolatrice', 'calculator', 'calcolo', 'somma'], name: 'calcolatrice', id: 'calculator' },
+    { keys: ['note', 'nota', 'appunti', 'todo', 'lista'], name: 'note', id: 'notes' },
+    { keys: ['meteo', 'tempo', 'weather'], name: 'meteo', id: 'weather' },
+    { keys: ['cronometro', 'timer', 'conto alla rovescia'], name: 'cronometro', id: 'timer' },
+    { keys: ['disegno', 'draw', 'pennello', 'canvas', 'colora'], name: 'disegno', id: 'draw' },
+    { keys: ['tris', 'tic tac toe', 'tic-tac-toe', 'filetto'], name: 'tris', id: 'tictactoe' },
+    { keys: ['memoria', 'memory', 'coppie'], name: 'memory', id: 'memory' },
+    { keys: ['serpente', 'snake'], name: 'serpente', id: 'snake' },
+    { keys: ['indovina', 'guess', 'numero segreto', 'random'], name: 'indovina-numero', id: 'guess' },
+    { keys: ['quiz', 'domande'], name: 'quiz', id: 'quiz' },
+    { keys: ['contatore', 'counter', 'conteggio'], name: 'contatore', id: 'counter' },
+    { keys: ['orologio', 'clock', 'ora'], name: 'orologio', id: 'clock' },
+    { keys: ['convertitore', 'conversione', 'unita'], name: 'convertitore', id: 'converter' },
+    { keys: ['password', 'generatore password'], name: 'generatore-password', id: 'password' },
+  ];
+  let best = null, bestScore = 0;
+  TYPES.forEach(t => {
+    t.keys.forEach(k => {
+      if (p.includes(k) && k.length > bestScore) { bestScore = k.length; best = t; }
+    });
+  });
+  return best;
+}
+
+function createAppFile(typeId, title) {
+  const baseName = typeId + '.html';
+  const content = wrapApp(title, buildAppCode(typeId, title));
+  let path = baseName;
+  let n = 2;
+  while (state.files[path]) { path = typeId + '-' + (n++) + '.html'; }
+  state.files[path] = { name: path.split('/').pop(), path, lang: 'html', content };
+  setActiveTab(path);
+  scheduleSave();
+  return path;
+}
+
+function generateAIResponse(prompt) {
+  const p = prompt.toLowerCase();
+  const f = getActiveFile();
+  if (/^(ciao|salve|hey|buongiorno|buonasera|hola|hi|hello)\b/.test(p)) {
+    return { html: 'Ciao! 👋 Fammi una domanda e farò del mio meglio. Prova: "cos\'è linux", "cos\'è la ram".\n\nOppure chiedimi di <b>creare un\'app</b>: "fammi una calcolatrice", "fammi un gioco del tris".', code: null };
+  }
+
+  // RICHIESTA APP: intuisce e crea un file HTML completo
+  const appVerb = /(voglio|vorrei|fammi|fai(?:mi)?|crea(?:mi)?|costruisci|genera|facci|dammi|ho bisogno|mi serve|mi fai|fammi fare|voglio fare|vorrei fare|fammi un|fammi una)/.test(p);
+  const appTarget = /(app|applicazione|giochino|gioco|sito|tool|programma|calcolatrice|calculator|tris|tic|memory|snake|serpente|timer|cronometro|quiz|note|nota|meteo|weather|disegno|draw|password|convertitore|contatore|orologio|clock|indovina|guess)/.test(p);
+  if (appVerb && appTarget) {
+    const app = inferApp(prompt);
+    if (app) {
+      const path = createAppFile(app.id, app.name.charAt(0).toUpperCase() + app.name.slice(1));
+      const btn1 = `<button class="apply-btn" data-view="${encodeURIComponent(path)}">👁 Visualizza</button>`;
+      return { html: `Ho intuito che vuoi un\'app: <b>${app.name}</b>. 🎉\n\nHo creato il file <code>${path}</code> con codice completo e funzionante. ${btn1}`, code: null };
+    } else {
+      return { html: `Vorrei aiutarti a creare un\'app, ma non ho capito <i>quale</i>. 🤔\n\nPuoi chiedermi ad esempio:\n• "fammi una calcolatrice"\n• "fammi un gioco del tris"\n• "fammi un\'app per le note"\n• "fammi un cronometro"\n• "fammi un memory game"\n• "fammi un generatore di password"`, code: null };
+    }
+  }
+
+  // DOMANDE SULLE CAPACITÀ
+  if (/(cosa|che cosa|che|dimmi|spiegami)\s*(cosa\s*)?(sai|puoi|riesci|sapresti|puoi)\s*(fare|fare\?|aiutarmi|aiutar)?|^(help|aiuto|assistenza)$/i.test(p) ||
+      /(cosa puoi fare|cosa sai fare|che cosa sai|che sai fare|cose che sai|cose che puoi|come funzioni)/.test(p)) {
+    return { html: `Ecco cosa so fare: 🛠️\n\n<b>1. Rispondere a domande di informatica</b>\nLinux, computer, RAM, CPU, internet, programmazione, IA e altro.\n\n<b>2. Creare app complete</b>\nDimmi "fammi una calcolatrice", "fammi un gioco del tris" e genererò un file HTML funzionante.\n\n<b>3. Scrivere codice</b>\nPosso generare funzioni e classi pronte da applicare.\n\n<b>4. Spiegare i tuoi file</b>\nChiedimi "spiega questo file".\n\n<b>5. Terminale</b>\nUsa ls, cat, new, write, rm e altro.\n\nFunziono offline, senza API key.`, code: null };
+  }
+
+  const wantsCode = /(crea|scrivi|genera|fai un|funzione|classe|componente|aggiungi|implementa|modifica|ho bisogno)/.test(p);
+  if (wantsCode && f && /(funzione|function|classe|class|componente|snippet|codice|code|script)/.test(p)) {
+    const fnName = extractFnName(prompt) || 'funzione';
+    const code = generateSnippet(f.lang, fnName, prompt);
+    const codeHtml = `<div class="code-snippet">${escapeHtml(code)}</div>`;
+    const actions = `<div class="actions"><button class="apply-btn" data-code="${encodeURIComponent(code)}">Apply ▸</button></div>`;
+    return { html: `Ecco una <b>${fnName}</b> per <code>${f.name}</code>:\n${codeHtml}${actions}`, code };
+  }
+  if (/spiega( questo)? file|questo file|cosa fa questo|spiegami (il|questo) file/.test(p) && f) {
+    return { html: `Il file <code>${f.name}</code> (${getLangLabel(f.lang)}) contiene ${f.content.split('\n').length} righe. Ecco un estratto:\n<div class="code-snippet">${escapeHtml(f.content.slice(0,300))}</div>`, code: null };
+  }
+  const k = findKnowledge(prompt);
+  if (k) return { html: `<b>${firstSentence(k.answer)}</b>\n\n${k.answer}`, code: null };
+  return { html: `Non conosco ancora la risposta per: "<i>${esc(prompt)}</i>". 🧠\n\nLa mia conoscenza è scritta a mano e copre <b>informatica e tecnologia</b>. Oppure chiedimi di <b>creare un\'app</b> ("fammi una calcolatrice").`, code: null };
+}
+
+function addMessage(role, html) {
+  const msg = document.createElement('div');
+  msg.className = 'msg ' + role;
+  msg.innerHTML = `<div class="av">${role === 'ai' ? '✦' : '🧑'}</div><div class="bubble">${html}</div>`;
+  aiMessages.appendChild(msg);
+  aiMessages.scrollTop = aiMessages.scrollHeight;
+  return msg;
+}
+
+function addTyping() {
+  const msg = document.createElement('div');
+  msg.className = 'msg ai';
+  msg.innerHTML = `<div class="av">✦</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  aiMessages.appendChild(msg);
+  aiMessages.scrollTop = aiMessages.scrollHeight;
+  return msg;
+}
+
+function sendAI() {
+  const prompt = aiInput.value.trim();
+  if (!prompt) return;
+  aiInput.value = '';
+  aiInput.style.height = 'auto';
+  addMessage('user', `<div class="txt">${esc(prompt)}</div>`);
+  const typing = addTyping();
+  setTimeout(() => {
+    typing.remove();
+    const resp = generateAIResponse(prompt);
+    const msgEl = addMessage('ai', `<div class="txt">${resp.html}</div>`);
+    msgEl.querySelectorAll('.apply-btn[data-code]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const code = decodeURIComponent(btn.getAttribute('data-code'));
+        applyCodeToEditor(code);
+      });
+    });
+    msgEl.querySelectorAll('.apply-btn[data-view]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const path = decodeURIComponent(btn.getAttribute('data-view'));
+        openPreview(path);
+      });
+    });
+  }, 600 + Math.random() * 600);
+}
+
+function applyCodeToEditor(code) {
+  const f = getActiveFile();
+  if (!f) return;
+  const pos = editor.selectionStart;
+  const before = f.content.slice(0, pos);
+  const after = f.content.slice(pos);
+  const sep = (before && !before.endsWith('\n')) ? '\n\n' : (before ? '\n' : '');
+  f.content = before + sep + code + '\n' + after;
+  state.dirty[f.path] = true;
+  const newPos = (before + sep + code + '\n').length;
+  renderEditor();
+  scheduleSave();
+  editor.setSelectionRange(newPos, newPos);
+  addMessage('ai', `<div class="txt">✅ Codice applicato a <code>${f.name}</code>.</div>`);
+  logTerminal(`apply: ${f.path} modificato`);
+}
+
+/* =====================================================================
+   TERMINALE
+===================================================================== */
+function logTerminal(text, kind) {
+  const line = document.createElement('div');
+  line.className = 'line ' + (kind || '');
+  line.textContent = text;
+  const inputRow = terminalBody.querySelector('.terminal-input-row');
+  if (inputRow) terminalBody.insertBefore(line, inputRow);
+  else terminalBody.appendChild(line);
+  terminalBody.scrollTop = terminalBody.scrollHeight;
+}
+
+function appendTermInput() {
+  const old = terminalBody.querySelector('.terminal-input-row');
+  if (old) old.remove();
+  const row = document.createElement('div');
+  row.className = 'terminal-input-row';
+  row.innerHTML = `<span class="prompt">$</span>`;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.placeholder = 'Scrivi un comando (help)…';
+  input.spellcheck = false;
+  input.autocapitalize = 'off';
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { const v = input.value; row.remove(); runCommand(v); }
+  });
+  row.appendChild(input);
+  terminalBody.appendChild(row);
+  terminalBody.scrollTop = terminalBody.scrollHeight;
+  input.focus();
+}
+
+function runCommand(cmd) {
+  const promptLine = document.createElement('div');
+  promptLine.className = 'line';
+  promptLine.innerHTML = `<span class="prompt">$</span> <span class="cmd">${esc(cmd)}</span>`;
+  terminalBody.appendChild(promptLine);
+  const lower = cmd.trim().toLowerCase();
+  let out = '';
+  if (lower === 'ls' || lower === 'ls -la') {
+    const list = Object.keys(state.files).map(p => state.files[p].name);
+    out = list.length ? list.join('  ') : '(cartella vuota)';
+  } else if (lower.startsWith('cat ')) {
+    const target = lower.slice(4).trim();
+    const found = Object.keys(state.files).find(p => p.endsWith(target) || p === target);
+    out = found ? state.files[found].content : `cat: ${target}: No such file or directory`;
+  } else if (lower.startsWith('new ')) {
+    const name = lower.slice(4).trim();
+    if (!name) out = 'Uso: new nomefile.js';
+    else { createFileByName(name); out = `File creato: ${pathFromName(name)}`; }
+  } else if (lower.startsWith('write ')) {
+    const rest = cmd.slice(6).trim();
+    const sp = rest.indexOf(' ');
+    if (sp === -1) out = 'Uso: write nomefile.js contenuto';
+    else { writeFileContent(rest.slice(0, sp), rest.slice(sp + 1), false); out = `Scritto in ${rest.slice(0, sp)}`; }
+  } else if (lower.startsWith('append ')) {
+    const rest = cmd.slice(7).trim();
+    const sp = rest.indexOf(' ');
+    if (sp === -1) out = 'Uso: append nomefile.js contenuto';
+    else { writeFileContent(rest.slice(0, sp), rest.slice(sp + 1), true); out = `Aggiunto a ${rest.slice(0, sp)}`; }
+  } else if (lower.startsWith('rm ')) {
+    const name = lower.slice(3).trim();
+    const found = Object.keys(state.files).find(p => p.endsWith(name) || p === name);
+    if (found) { deleteFile(found, true); out = `Rimosso: ${name}`; }
+    else out = `rm: ${name}: No such file`;
+  } else if (lower === 'git status') {
+    out = 'On branch main\nnothing to commit, working tree clean';
+  } else if (lower === 'help') {
+    out = 'ls · cat <file> · new <file> · write <file> <testo> · append <file> <testo> · rm <file>\ngit status · help · clear';
+  } else if (lower === 'clear') {
+    terminalBody.innerHTML = '';
+    appendTermInput();
+    return;
+  } else if (lower === '') {
+    return;
+  } else {
+    out = `zsh: command not found: ${cmd.trim().split(' ')[0]}`;
+  }
+  if (out) out.split('\n').forEach(o => {
+    const l = document.createElement('div');
+    l.className = 'line';
+    l.textContent = o;
+    terminalBody.appendChild(l);
+  });
+  appendTermInput();
+}
+
+function createFileByName(name) {
+  if (name.includes('..')) return;
+  let nm = name.trim();
+  if (!nm.includes('.')) nm += '.txt';
+  const path = pathFromName(nm);
+  const baseName = path.slice(path.lastIndexOf('/') + 1);
+  const lang = langFromName(baseName);
+  const starter = lang === 'python' ? '# ' + baseName + '\n\n' :
+                  lang === 'css' ? '/* ' + baseName + ' */\n\n' :
+                  lang === 'json' ? '{\n  \n}\n' :
+                  lang === 'markdown' ? '# ' + baseName + '\n\n' :
+                  lang === 'html' ? '<!DOCTYPE html>\n<html>\n<body>\n</body>\n</html>\n' :
+                  lang === 'txt' ? '' : '// ' + baseName + '\n\n';
+  state.files[path] = { name: baseName, path, lang, content: starter };
+  setActiveTab(path);
+  scheduleSave();
+}
+
+function writeFileContent(name, content, appendMode) {
+  const path = pathFromName(name);
+  const existing = Object.keys(state.files).find(p => p === path || p.endsWith('/' + name));
+  const targetPath = existing || path;
+  const baseName = targetPath.slice(targetPath.lastIndexOf('/') + 1);
+  const lang = langFromName(baseName);
+  if (existing && appendMode) {
+    const sep = state.files[existing].content && !state.files[existing].content.endsWith('\n') ? '\n' : '';
+    state.files[existing].content += sep + content;
+  } else {
+    state.files[targetPath] = { name: baseName, path: targetPath, lang, content };
+    if (!state.tabs.includes(targetPath)) state.tabs.push(targetPath);
+  }
+  state.dirty[targetPath] = true;
+  if (state.activeTab !== targetPath) setActiveTab(targetPath);
+  else renderEditor();
+  renderFileList();
+  scheduleSave();
+}
+
+/* =====================================================================
+   NUOVO FILE (modal)
+===================================================================== */
+const modalBackdrop = $('modalBackdrop');
+const newFileName = $('newFileName');
+
+function openModal() {
+  modalBackdrop.classList.add('show');
+  newFileName.value = '';
+  setTimeout(() => newFileName.focus(), 50);
+}
+function closeModal() { modalBackdrop.classList.remove('show'); }
+
+function createFile() {
+  let name = newFileName.value.trim();
+  if (!name) return;
+  if (!name.includes('.')) name += '.txt';
+  const idx = name.lastIndexOf('/');
+  const baseName = idx === -1 ? name : name.slice(idx + 1);
+  const folder = idx === -1 ? '' : name.slice(0, idx);
+  const path = (folder ? folder + '/' : '') + baseName;
+  const lang = langFromName(baseName);
+  const starter = lang === 'python' ? '# ' + baseName + '\n\n' :
+                  lang === 'css' ? '/* ' + baseName + ' */\n\n' :
+                  lang === 'json' ? '{\n  \n}\n' :
+                  lang === 'markdown' ? '# ' + baseName + '\n\n' :
+                  lang === 'html' ? '<!DOCTYPE html>\n<html>\n<head>\n  <title>' + baseName + '</title>\n</head>\n<body>\n  <h1>Ciao mondo</h1>\n</body>\n</html>\n' :
+                  lang === 'txt' ? '' : '// ' + baseName + '\n\n';
+  state.files[path] = { name: baseName, path, lang, content: starter };
+  setActiveTab(path);
+  closeModal();
+  switchScreen('screenEditor');
+  logTerminal(`create: ${path}`);
+  scheduleSave();
+}
+
+/* =====================================================================
+   ANTEPRIMA
+===================================================================== */
+const previewBackdrop = $('previewBackdrop');
+const previewTitle = $('previewTitle');
+const previewBody = $('previewBody');
+let currentPreviewPath = null;
+let previewMode = 'result';
+
+function looksLikeHTML(content) {
+  const s = content.trim();
+  return /<(!doctype|html|head|body|div|h1|h2|p|a|script|style|button|input|form|table|ul|img|span)[\s>]/i.test(s) || /<\/[a-z][a-z0-9]*\s*>/i.test(s);
+}
+
+function isRenderable(f) {
+  return f.lang === 'html' || looksLikeHTML(f.content);
+}
+
+function renderPreview() {
+  const f = state.files[currentPreviewPath];
+  if (!f) return;
+  const renderable = isRenderable(f);
+  if (renderable && previewMode === 'result') {
+    previewBody.innerHTML = '<iframe class="render-view" sandbox="allow-scripts allow-modals allow-forms allow-popups" allow="fullscreen"></iframe>';
+    const iframe = previewBody.querySelector('iframe');
+    iframe.srcdoc = f.content;
+  } else {
+    const useLang = renderable ? 'html' : f.lang;
+    const highlighted = highlightCode(f.content, useLang === 'txt' ? 'text' : useLang);
+    previewBody.innerHTML = `<pre class="code-view"><code>${highlighted}</code></pre>`;
+  }
+  const tR = $('toggleResult'), tC = $('toggleCode');
+  const showToggle = renderable;
+  tR.style.display = showToggle ? '' : 'none';
+  tC.style.display = showToggle ? '' : 'none';
+  tR.classList.toggle('active', previewMode === 'result');
+  tC.classList.toggle('active', previewMode === 'code');
+}
+
+function openPreview(path) {
+  const f = state.files[path];
+  if (!f) return;
+  currentPreviewPath = path;
+  previewMode = 'result';
+  previewTitle.textContent = f.path;
+  previewBackdrop.classList.add('show');
+  renderPreview();
+}
+
+function closePreview() {
+  previewBackdrop.classList.remove('show');
+  currentPreviewPath = null;
+  previewBody.innerHTML = '';
+}
+
+/* =====================================================================
+   EVENTI EDITOR + AI
+===================================================================== */
+editor.addEventListener('input', () => {
+  const f = getActiveFile();
+  if (f) {
+    f.content = editor.value.replace(/\n$/, '');
+    state.dirty[f.path] = true;
+  }
+  LAST_CODE = editor.value.replace(/\n$/, '');
+  const highlighted = highlightCode(LAST_CODE, currentLang);
+  codeOut.innerHTML = highlighted + '\n<span></span>';
+  renderGutter();
+  syncScroll();
+  renderFileList();
+  scheduleSave();
+});
+
+editor.addEventListener('scroll', syncScroll);
+
+editor.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    editor.setRangeText('  ', start, end, 'end');
+    editor.dispatchEvent(new Event('input'));
+  }
+});
+
+function autoResizeAI() {
+  aiInput.style.height = 'auto';
+  aiInput.style.height = Math.min(aiInput.scrollHeight, 120) + 'px';
+}
+
+aiInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAI(); }
+  setTimeout(autoResizeAI, 0);
+});
+aiInput.addEventListener('input', autoResizeAI);
+
+$('aiSend').addEventListener('click', sendAI);
+
+terminalBody.addEventListener('click', () => {
+  const input = terminalBody.querySelector('input');
+  if (input) input.focus();
+});
+
+/* =====================================================================
+   BOTTONI + LISTENER GLOBALI
+===================================================================== */
+$('newFileBtn').addEventListener('click', openModal);
+$('welcomeNewFile').addEventListener('click', openModal);
+$('modalCancel').addEventListener('click', closeModal);
+$('modalOk').addEventListener('click', createFile);
+newFileName.addEventListener('keydown', (e) => { if (e.key === 'Enter') createFile(); });
+modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) closeModal(); });
+
+$('edRun').addEventListener('click', () => {
+  if (state.activeTab) openPreview(state.activeTab);
+});
+
+$('previewClose').addEventListener('click', closePreview);
+$('previewEdit').addEventListener('click', () => {
+  if (currentPreviewPath) { setActiveTab(currentPreviewPath); switchScreen('screenEditor'); }
+  closePreview();
+});
+$('toggleResult').addEventListener('click', () => { previewMode = 'result'; renderPreview(); });
+$('toggleCode').addEventListener('click', () => { previewMode = 'code'; renderPreview(); });
+previewBackdrop.addEventListener('click', (e) => { if (e.target === previewBackdrop) closePreview(); });
+
+$('termClear').addEventListener('click', () => { terminalBody.innerHTML = ''; appendTermInput(); });
+
+/* =====================================================================
+   SUPABASE — CONFIGURAZIONE
+   ---------------------------------------------------------------------
+   Sostituisci i due valori qui sotto con quelli del TUO progetto
+   Supabase (Dashboard > Project Settings > API).
+===================================================================== */
+const SUPABASE_URL = 'https://qittasdclxarusrhqkdb.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_sDHvG-9IN2bvWR5LjmjkBQ_RHMRAfd-';
+
+let supabase = null;
+function getSupabase() {
+  if (supabase) return supabase;
+  if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    return supabase;
+  }
+  return null;
+}
+
+/* =====================================================================
+   AUTENTICAZIONE (email + password)
+===================================================================== */
+let currentUser = null;
+let syncTimer = null;
+
+const authOverlay = $('authOverlay');
+const authTabLogin = $('authTabLogin');
+const authTabSignup = $('authTabSignup');
+const authEmail = $('authEmail');
+const authPassword = $('authPassword');
+const authSubmit = $('authSubmit');
+const authError = $('authError');
+const authLoader = $('authLoader');
+const accountBtn = $('accountBtn');
+const accountAvatar = $('accountAvatar');
+const accountLabel = $('accountLabel');
+const syncStatus = $('syncStatus');
+
+let authMode = 'login';
+
+function setAuthMode(mode) {
+  authMode = mode;
+  if (mode === 'login') {
+    authTabLogin.classList.add('active');
+    authTabSignup.classList.remove('active');
+    authSubmit.textContent = 'Accedi';
+  } else {
+    authTabSignup.classList.add('active');
+    authTabLogin.classList.remove('active');
+    authSubmit.textContent = 'Registrati';
+  }
+  authError.textContent = '';
+}
+
+authTabLogin.addEventListener('click', () => setAuthMode('login'));
+authTabSignup.addEventListener('click', () => setAuthMode('signup'));
+
+function showAuth() {
+  authOverlay.style.display = 'flex';
+  setAuthMode('login');
+  authError.textContent = '';
+  authLoader.textContent = '';
+}
+
+function hideAuth() {
+  authOverlay.style.display = 'none';
+}
+
+function updateAccountUI() {
+  if (currentUser) {
+    accountBtn.style.display = 'flex';
+    const email = currentUser.email || '';
+    accountAvatar.textContent = (email[0] || 'R').toUpperCase();
+    accountLabel.textContent = email;
+  } else {
+    accountBtn.style.display = 'none';
+  }
+}
+
+authSubmit.addEventListener('click', async () => {
+  const sb = getSupabase();
+  if (!sb) {
+    authError.textContent = 'Supabase non è configurato. Aggiungi URL e chiave nel codice.';
+    return;
+  }
+  const email = authEmail.value.trim();
+  const password = authPassword.value;
+  if (!email || !password) {
+    authError.textContent = 'Inserisci email e password.';
+    return;
+  }
+  authLoader.textContent = 'Attendi…';
+  authError.textContent = '';
+  authSubmit.disabled = true;
+
+  let result = authMode === 'login'
+    ? await sb.auth.signInWithPassword({ email, password })
+    : await sb.auth.signUp({ email, password });
+
+  authSubmit.disabled = false;
+  authLoader.textContent = '';
+
+  if (result.error) {
+    let msg = result.error.message;
+    if (msg.includes('Invalid login credentials')) msg = 'Email o password errati.';
+    if (msg.includes('already registered')) msg = 'Questa email è già registrata, prova ad accedere.';
+    if (msg.includes('Password should be')) msg = 'La password deve avere almeno 6 caratteri.';
+    authError.textContent = msg;
+    return;
+  }
+
+  const u = result.data.user || null;
+  if (authMode === 'signup' && !u) {
+    authError.textContent = 'Registrazione riuscita! Controlla la tua email per confermare, poi accedi.';
+    return;
+  }
+
+  currentUser = u;
+  updateAccountUI();
+  hideAuth();
+  await loadWorkspace();
+  logTerminal('Benvenuto, ' + (currentUser.email || '') + '! Il tuo lavoro è sincronizzato.');
+});
+
+accountBtn.addEventListener('click', async () => {
+  if (confirm('Vuoi uscire dall\'account? Il lavoro è già salvato sul cloud.')) {
+    const sb = getSupabase();
+    if (sb) await sb.auth.signOut();
+    currentUser = null;
+    updateAccountUI();
+    showAuth();
+  }
+});
+
+/* =====================================================================
+   SINCRONIZZAZIONE FILE (tabella "workspaces")
+===================================================================== */
+function setSyncStatus(kind) {
+  if (kind === 'saving') { syncStatus.textContent = 'Salvataggio…'; syncStatus.className = 'sync-status saving'; }
+  else if (kind === 'saved') { syncStatus.textContent = '✓'; syncStatus.className = 'sync-status saved'; }
+  else if (kind === 'error') { syncStatus.textContent = 'Errore'; syncStatus.className = 'sync-status error'; }
+  else { syncStatus.textContent = ''; syncStatus.className = 'sync-status'; }
+}
+
+async function loadWorkspace() {
+  const sb = getSupabase();
+  if (!sb || !currentUser) return;
+  setSyncStatus('saving');
+  try {
+    const { data, error } = await sb
+      .from('workspaces')
+      .select('data')
+      .eq('id', currentUser.id)
+      .maybeSingle();
+    if (error && error.code !== 'PGRST116') {
+      if (error.message && error.message.includes('does not exist')) {
+        logTerminal('ERRORE: manca la tabella "workspaces". Esegui la SQL fornita.');
+      }
+      setSyncStatus('error');
+      return;
+    }
+    if (data && data.data) {
+      const parsed = JSON.parse(data.data);
+      if (parsed && typeof parsed === 'object') {
+        state.files = parsed.files || {};
+        state.tabs = [];
+        state.activeTab = null;
+        state.dirty = {};
+      }
+    }
+    renderFileList();
+    renderEditor();
+    setSyncStatus('saved');
+  } catch (e) {
+    setSyncStatus('error');
+    logTerminal('Errore nel caricamento dal cloud: ' + e.message);
+  }
+}
+
+async function saveWorkspace() {
+  const sb = getSupabase();
+  if (!sb || !currentUser) return;
+  if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
+  setSyncStatus('saving');
+  try {
+    const payload = JSON.stringify({ files: state.files });
+    const { error } = await sb
+      .from('workspaces')
+      .upsert({ id: currentUser.id, data: payload, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    if (error) {
+      if (error.message && error.message.includes('does not exist')) {
+        logTerminal('ERRORE: manca la tabella "workspaces". Esegui la SQL fornita.');
+      }
+      setSyncStatus('error');
+      return;
+    }
+    setSyncStatus('saved');
+  } catch (e) {
+    setSyncStatus('error');
+    logTerminal('Errore nel salvataggio sul cloud: ' + e.message);
+  }
+}
+
+function scheduleSave() {
+  if (!currentUser) return;
+  if (syncTimer) clearTimeout(syncTimer);
+  setSyncStatus('saving');
+  syncTimer = setTimeout(() => saveWorkspace(), 1200);
+}
+
+/* =====================================================================
+   INIT
+===================================================================== */
+function init() {
+  state.activeTab = null;
+  renderFileList();
+  renderEditor();
+
+  logTerminal('Cursorino Mobile v1 — funziona offline, senza API key');
+  logTerminal('Scrivi un comando (help per l\'elenco)');
+  appendTermInput();
+
+  const sb = getSupabase();
+  if (sb) {
+    sb.auth.getSession().then(({ data }) => {
+      if (data && data.session) {
+        currentUser = data.session.user;
+        updateAccountUI();
+        hideAuth();
+        loadWorkspace();
+      } else {
+        showAuth();
+      }
+    }).catch(() => showAuth());
+  } else {
+    logTerminal('Nota: Supabase non configurato. Attiva il login per la sincronizzazione.');
+  }
+}
+
+init();
+</script>
+</body>
+</html>
