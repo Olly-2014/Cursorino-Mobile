@@ -1708,10 +1708,26 @@ let supabaseClient = null;
 function getSupabase() {
   if (supabaseClient) return supabaseClient;
   if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: window.localStorage,
+        storageKey: 'cursorino-auth',
+      },
+    });
     return supabaseClient;
   }
   return null;
+}
+
+function enterSession(session) {
+  if (!session || !session.user) return false;
+  currentUser = session.user;
+  updateAccountUI();
+  hideAuth();
+  return true;
 }
 
 /* =====================================================================
@@ -1754,7 +1770,6 @@ authTabSignup.addEventListener('click', () => setAuthMode('signup'));
 
 function showAuth() {
   authOverlay.style.display = 'flex';
-  setAuthMode('login');
   authError.textContent = '';
   authLoader.textContent = '';
 }
@@ -1800,23 +1815,25 @@ authSubmit.addEventListener('click', async () => {
   if (result.error) {
     let msg = result.error.message;
     if (msg.includes('Invalid login credentials')) msg = 'Email o password errati.';
-    if (msg.includes('already registered')) msg = 'Questa email è già registrata, prova ad accedere.';
+    if (msg.includes('already registered') || msg.includes('User already registered')) msg = 'Questa email è già registrata, prova ad accedere.';
     if (msg.includes('Password should be')) msg = 'La password deve avere almeno 6 caratteri.';
+    if (msg.includes('Email not confirmed')) msg = 'Email non confermata. Controlla la posta, poi accedi.';
     authError.textContent = msg;
     return;
   }
 
-  const u = result.data.user || null;
-  if (authMode === 'signup' && !u) {
-    authError.textContent = 'Registrazione riuscita! Controlla la tua email per confermare, poi accedi.';
+  const session = result.data.session || null;
+  if (!session) {
+    authError.textContent = authMode === 'signup'
+      ? 'Registrazione riuscita. Accedi con la stessa email e password.'
+      : 'Accesso non riuscito. Riprova.';
     return;
   }
 
-  currentUser = u;
-  updateAccountUI();
-  hideAuth();
-  await loadWorkspace();
-  logTerminal('Benvenuto, ' + (currentUser.email || '') + '! Il tuo lavoro è sincronizzato.');
+  if (enterSession(session)) {
+    await loadWorkspace();
+    logTerminal('Benvenuto, ' + (currentUser.email || '') + '! Il tuo lavoro è sincronizzato.');
+  }
 });
 
 accountBtn.addEventListener('click', async () => {
@@ -1919,18 +1936,36 @@ function init() {
 
   const sb = getSupabase();
   if (sb) {
-    sb.auth.getSession().then(({ data }) => {
-      if (data && data.session) {
-        currentUser = data.session.user;
-        updateAccountUI();
-        hideAuth();
-        loadWorkspace();
-      } else {
-        showAuth();
+    hideAuth();
+    sb.auth.getSession().then(({ data, error }) => {
+      if (!error && data && data.session) {
+        if (enterSession(data.session)) loadWorkspace();
+        return;
       }
+      showAuth();
     }).catch(() => showAuth());
+
+    sb.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        currentUser = null;
+        updateAccountUI();
+        setAuthMode('login');
+        showAuth();
+        return;
+      }
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') && session) {
+        if (!currentUser || currentUser.id !== session.user.id) {
+          enterSession(session);
+        } else {
+          currentUser = session.user;
+          updateAccountUI();
+          hideAuth();
+        }
+      }
+    });
   } else {
     logTerminal('Nota: Supabase non configurato. Attiva il login per la sincronizzazione.');
+    showAuth();
   }
 }
 
