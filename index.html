@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Cursorino">
 <meta name="application-name" content="Cursorino">
-<meta name="theme-color" content="#22222a">
+<meta name="theme-color" content="#2d1b3d">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
@@ -44,6 +44,7 @@
     --shadow: 0 -8px 30px rgba(0,0,0,0.45);
     --glass-tint: rgba(255, 255, 255, 0.03);
     --nav-solid: #22222a;
+    --home-chrome: #2d1b3d;
     --specular: linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.02) 40%, rgba(255,255,255,0) 60%);
     --page-bg:
       radial-gradient(120% 90% at 8% 0%, rgba(255, 69, 58, 0.45) 0%, rgba(255, 69, 58, 0) 45%),
@@ -59,7 +60,7 @@
     overflow: hidden;
     overscroll-behavior: none;
     background: var(--page-bg);
-    background-color: var(--nav-solid);
+    background-color: var(--home-chrome);
   }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Roboto, Helvetica, Arial, sans-serif;
@@ -428,6 +429,14 @@
     display: flex; align-items: center; justify-content: center;
     padding: max(24px, env(safe-area-inset-top, 0px)) 24px max(24px, env(safe-area-inset-bottom, 0px));
     background: var(--page-bg);
+  }
+  .auth-overlay::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: env(safe-area-inset-bottom, 0px);
+    background: var(--home-chrome);
+    pointer-events: none;
   }
   .auth-card {
     width: 100%; max-width: 360px;
@@ -1779,8 +1788,14 @@ function setAuthMode(mode) {
 authTabLogin.addEventListener('click', () => setAuthMode('login'));
 authTabSignup.addEventListener('click', () => setAuthMode('signup'));
 
+function setThemeColor(hex) {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', hex);
+}
+
 function showAuth() {
   authOverlay.style.display = 'flex';
+  setThemeColor('#2d1b3d');
   setAuthMode('login');
   authError.textContent = '';
   authLoader.textContent = '';
@@ -1788,6 +1803,7 @@ function showAuth() {
 
 function hideAuth() {
   authOverlay.style.display = 'none';
+  setThemeColor('#22222a');
 }
 
 function updateAccountUI() {
