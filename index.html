@@ -420,9 +420,15 @@
     padding: 28px 24px;
     box-shadow: var(--shadow);
   }
-  .auth-card .auth-logo { display: flex; align-items: center; justify-content: center; margin-bottom: 4px; }
-  .auth-card .auth-logo img { width: 58px; height: 58px; border-radius: 13px; }
-  .auth-card h1 { font-size: 22px; text-align: center; margin: 8px 0 2px; }
+  .auth-card .auth-logo {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    margin: 0 0 2px;
+  }
+  .auth-card .auth-logo img,
+  .auth-card .auth-logo .logo-dot {
+    width: 58px; height: 58px; border-radius: 13px; font-size: 28px;
+  }
+  .auth-card h1 { font-size: 22px; text-align: center; margin: 10px 0 2px; }
   .auth-card .auth-sub { text-align: center; color: var(--text-muted); font-size: 13px; margin-bottom: 18px; line-height: 1.4; }
   .auth-tabs { display: flex; gap: 4px; background: var(--bg-raise); border-radius: 12px; padding: 4px; margin-bottom: 16px; }
   .auth-tab {
@@ -476,7 +482,9 @@
     <!-- SCHERMATA LOGIN / REGISTRAZIONE -->
     <div class="auth-overlay" id="authOverlay" style="display:none;">
       <div class="auth-card">
-        <div class="auth-logo"><img src="icon.svg" alt="Cursorino" /></div>
+        <div class="auth-logo">
+          <img src="icon.svg" alt="Cursorino" />
+        </div>
         <h1>Cursorino</h1>
         <p class="auth-sub">Accedi per sincronizzare il tuo lavoro su tutti i dispositivi</p>
 
