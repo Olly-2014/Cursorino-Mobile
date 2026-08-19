@@ -424,11 +424,17 @@
   /* === SCHERMATA LOGIN / REGISTRAZIONE === */
   .auth-overlay {
     position: fixed;
-    inset: 0;
+    top: 0; right: 0; bottom: 0; left: 0;
+    width: 100%;
+    height: 100%;
     z-index: 2000;
-    display: flex; align-items: center; justify-content: center;
-    padding: max(24px, env(safe-area-inset-top, 0px)) 24px max(24px, env(safe-area-inset-bottom, 0px));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: env(safe-area-inset-top, 0px) 20px env(safe-area-inset-bottom, 0px);
     background: var(--page-bg);
+    overflow-y: auto;
   }
   .auth-overlay::after {
     content: "";
@@ -439,7 +445,9 @@
     pointer-events: none;
   }
   .auth-card {
-    width: 100%; max-width: 360px;
+    width: min(360px, 100%);
+    margin: auto;
+    flex: 0 0 auto;
     background: var(--bg-deep);
     -webkit-backdrop-filter: blur(30px) saturate(180%);
     backdrop-filter: blur(30px) saturate(180%);
@@ -447,6 +455,17 @@
     border-radius: 22px;
     padding: 28px 24px;
     box-shadow: var(--shadow);
+  }
+  @media (max-height: 780px) {
+    .auth-card { padding: 18px 20px; }
+    .auth-card .auth-logo img,
+    .auth-card .auth-logo .logo-dot { width: 48px; height: 48px; font-size: 24px; }
+    .auth-card h1 { font-size: 20px; margin: 6px 0 0; }
+    .auth-card .auth-sub { margin-bottom: 12px; font-size: 12px; }
+    .auth-tabs { margin-bottom: 12px; }
+    .auth-field { margin-bottom: 10px; }
+    .auth-hint { margin-top: 10px; padding: 10px 12px; }
+    .auth-error, .auth-loader { margin-top: 8px; min-height: 0; }
   }
   .auth-card .auth-logo {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
