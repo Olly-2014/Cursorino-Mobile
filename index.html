@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-touch-fullscreen" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Cursorino">
 <meta name="application-name" content="Cursorino">
-<meta name="theme-color" content="#101014">
+<meta name="theme-color" content="#16141c">
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
@@ -43,27 +44,41 @@
     --shadow: 0 -8px 30px rgba(0,0,0,0.45);
     --glass-tint: rgba(255, 255, 255, 0.03);
     --specular: linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.02) 40%, rgba(255,255,255,0) 60%);
+    --page-bg:
+      radial-gradient(120% 90% at 8% 0%, rgba(255, 69, 58, 0.45) 0%, rgba(255, 69, 58, 0) 45%),
+      radial-gradient(120% 90% at 100% 10%, rgba(10, 132, 255, 0.45) 0%, rgba(10, 132, 255, 0) 48%),
+      radial-gradient(140% 90% at 50% 100%, rgba(191, 90, 242, 0.55) 0%, rgba(191, 90, 242, 0) 58%),
+      radial-gradient(110% 80% at 90% 80%, rgba(76, 217, 100, 0.30) 0%, rgba(76, 217, 100, 0) 50%),
+      #16141c;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html {
     height: 100%;
-    height: 100dvh;
+    height: 100lvh;
     height: -webkit-fill-available;
-    background: #101014;
+    background: var(--page-bg);
+    background-color: #16141c;
+  }
+  html::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100lvh;
+    min-height: calc(100lvh + env(safe-area-inset-bottom, 0px));
+    background: var(--page-bg);
+    z-index: 0;
+    pointer-events: none;
   }
   html, body { overflow: hidden; overscroll-behavior: none; }
   body {
+    position: relative;
+    z-index: 1;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Roboto, Helvetica, Arial, sans-serif;
     min-height: 100%;
-    min-height: 100dvh;
+    min-height: 100lvh;
     min-height: -webkit-fill-available;
-    background:
-      radial-gradient(120% 90% at 8% 0%, rgba(255, 69, 58, 0.45) 0%, rgba(255, 69, 58, 0) 45%),
-      radial-gradient(120% 90% at 100% 10%, rgba(10, 132, 255, 0.45) 0%, rgba(10, 132, 255, 0) 48%),
-      radial-gradient(130% 100% at 50% 110%, rgba(191, 90, 242, 0.45) 0%, rgba(191, 90, 242, 0) 55%),
-      radial-gradient(110% 80% at 90% 80%, rgba(76, 217, 100, 0.30) 0%, rgba(76, 217, 100, 0) 50%),
-      #101014;
-    background-color: #101014;
+    background: transparent;
     color: var(--text);
     -webkit-font-smoothing: antialiased;
     font-size: 16px;
@@ -86,7 +101,7 @@
   .app {
     display: flex; flex-direction: column;
     height: 100%;
-    height: 100dvh;
+    height: 100lvh;
     height: -webkit-fill-available;
     padding-top: env(safe-area-inset-top, 0px);
   }
@@ -419,16 +434,12 @@
     top: 0; right: 0; bottom: 0; left: 0;
     width: 100%;
     height: 100%;
-    height: 100dvh;
+    height: 100lvh;
     height: -webkit-fill-available;
     z-index: 2000;
     display: flex; align-items: center; justify-content: center;
     padding: max(24px, env(safe-area-inset-top, 0px)) 24px max(24px, env(safe-area-inset-bottom, 0px));
-    background:
-      radial-gradient(120% 90% at 8% 0%, rgba(255, 69, 58, 0.45) 0%, rgba(255, 69, 58, 0) 45%),
-      radial-gradient(120% 90% at 100% 10%, rgba(10, 132, 255, 0.45) 0%, rgba(10, 132, 255, 0) 48%),
-      radial-gradient(130% 100% at 50% 110%, rgba(191, 90, 242, 0.45) 0%, rgba(191, 90, 242, 0) 55%),
-      #101014;
+    background: var(--page-bg);
   }
   .auth-card {
     width: 100%; max-width: 360px;
