@@ -1704,12 +1704,12 @@ $('termClear').addEventListener('click', () => { terminalBody.innerHTML = ''; ap
 const SUPABASE_URL = 'https://qittasdclxarusrhqkdb.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_sDHvG-9IN2bvWR5LjmjkBQ_RHMRAfd-';
 
-let supabase = null;
+let supabaseClient = null;
 function getSupabase() {
-  if (supabase) return supabase;
+  if (supabaseClient) return supabaseClient;
   if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    return supabase;
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    return supabaseClient;
   }
   return null;
 }
