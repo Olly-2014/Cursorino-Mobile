@@ -424,30 +424,27 @@
   /* === SCHERMATA LOGIN / REGISTRAZIONE === */
   .auth-overlay {
     position: fixed;
-    top: 0; right: 0; bottom: 0; left: 0;
+    top: 0; right: 0; bottom: -80px; left: 0;
     width: 100%;
-    height: 100%;
+    height: auto;
+    min-height: calc(100% + 80px);
     z-index: 2000;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: env(safe-area-inset-top, 0px) 20px env(safe-area-inset-bottom, 0px);
+    padding: calc(env(safe-area-inset-top, 0px) + 6vh) 20px 100px;
     background: var(--page-bg);
     overflow-y: auto;
   }
   .auth-overlay::after {
-    content: "";
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    height: env(safe-area-inset-bottom, 0px);
-    background: var(--home-chrome);
-    pointer-events: none;
+    display: none;
   }
   .auth-card {
     width: min(360px, 100%);
-    margin: auto;
+    margin: 8vh auto 0;
     flex: 0 0 auto;
+    transform: translateY(4vh);
     background: var(--bg-deep);
     -webkit-backdrop-filter: blur(30px) saturate(180%);
     backdrop-filter: blur(30px) saturate(180%);
